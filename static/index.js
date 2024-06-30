@@ -202,3 +202,5 @@ window.onload = function () {
     alert("Not supporting websockets");
   }
 };
+
+console.log("TEST");
