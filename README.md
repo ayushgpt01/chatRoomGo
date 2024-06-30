@@ -21,7 +21,7 @@ This project implements a simple chat room web server using WebSocket for real-t
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/your-username/chat-room.git
+   git clone https://github.com/ayushgpt01/chatRoomGo.git
    cd chat-room
    ```
 
