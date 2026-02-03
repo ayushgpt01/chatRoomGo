@@ -7,14 +7,27 @@ export function initWebSocket() {
     console.log("supports websockets");
     conn = new WebSocket("ws://" + document.location.host + "/ws");
 
+    conn.onopen = function () {
+      console.log("WebSocket connection established");
+    };
+
     conn.onmessage = function (evt) {
       const eventData = JSON.parse(evt.data);
       const event = Object.assign(new Event(), eventData);
       console.log("event", event);
       routeEvent(event);
     };
+
+    conn.onclose = function () {
+      console.log("WebSocket connection closed, attempting to reconnect...");
+      setTimeout(initWebSocket, 5000); // Reconnect after 5 seconds
+    };
+
+    conn.onerror = function (error) {
+      console.error("WebSocket error:", error);
+    };
   } else {
-    alert("Not supporting websockets");
+    alert("WebSocket not supported by your browser.");
   }
 }
 
@@ -33,7 +46,10 @@ function routeEvent(event) {
 }
 
 export function sendEvent(eventName, payload) {
-  const event = new Event(eventName, payload);
-  console.log(JSON.stringify(event));
-  conn.send(JSON.stringify(event));
+  if (conn && conn.readyState === WebSocket.OPEN) {
+    const event = new Event(eventName, payload);
+    conn.send(JSON.stringify(event));
+  } else {
+    console.log("WebSocket connection is not open");
+  }
 }
