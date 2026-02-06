@@ -1,7 +1,10 @@
 package ws
 
 import (
+	"encoding/json"
+
 	"github.com/ayushgpt01/chatRoomGo/internal/chat"
+	"github.com/ayushgpt01/chatRoomGo/internal/dto"
 	"github.com/gorilla/websocket"
 )
 
@@ -9,7 +12,7 @@ type Client struct {
 	id     string
 	roomID string
 	conn   *websocket.Conn
-	send   chan []byte
+	send   chan chat.ChatEvent
 }
 
 func (c *Client) readPump(hub *Hub, chatService *chat.ChatService) {
@@ -24,15 +27,37 @@ func (c *Client) readPump(hub *Hub, chatService *chat.ChatService) {
 			return
 		}
 
-		chatService.HandleIncoming(c.roomID, c.id, data)
+		var msg dto.IncomingMessage
+
+		err = json.Unmarshal(data, &msg)
+		if err != nil {
+			continue
+		}
+
+		evt, err := chatService.HandleIncoming(hub.ctx, c.roomID, c.id, msg)
+		if err != nil {
+			continue
+		}
+
+		hub.Broadcast(c.roomID, evt)
 	}
 }
 
 func (c *Client) writePump() {
 	defer c.conn.Close()
 
-	for msg := range c.send {
-		if err := c.conn.WriteMessage(websocket.TextMessage, msg); err != nil {
+	for evt := range c.send {
+		out := dto.OutgoingEvent{
+			Type:    evt.Type(),
+			Payload: evt.Payload(),
+		}
+
+		data, err := json.Marshal(out)
+		if err != nil {
+			continue
+		}
+
+		if err := c.conn.WriteMessage(websocket.TextMessage, data); err != nil {
 			return
 		}
 	}

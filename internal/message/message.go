@@ -3,6 +3,7 @@ package message
 import (
 	"time"
 
+	"github.com/ayushgpt01/chatRoomGo/internal/room"
 	"github.com/ayushgpt01/chatRoomGo/internal/user"
 )
 
@@ -12,6 +13,7 @@ type Message struct {
 	Id        MessageId   `db:"id"`
 	Content   string      `db:"content"`
 	UserId    user.UserId `db:"user_id"`
+	RoomId    room.RoomId `db:"room_id"`
 	CreatedAt time.Time   `db:"created_at"`
 	UpdatedAt time.Time   `db:"updated_at"`
 }

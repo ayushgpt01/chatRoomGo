@@ -48,7 +48,7 @@ func (h *Wshandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	client := Client{
 		id:     user,
 		conn:   ws,
-		send:   make(chan []byte),
+		send:   make(chan chat.ChatEvent),
 		roomID: roomId,
 	}
 

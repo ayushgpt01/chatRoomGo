@@ -14,6 +14,7 @@ import (
 
 	"github.com/ayushgpt01/chatRoomGo/internal/chat"
 	"github.com/ayushgpt01/chatRoomGo/internal/message"
+	"github.com/ayushgpt01/chatRoomGo/internal/room"
 	"github.com/ayushgpt01/chatRoomGo/internal/router"
 	"github.com/ayushgpt01/chatRoomGo/internal/user"
 	"github.com/ayushgpt01/chatRoomGo/internal/ws"
@@ -31,7 +32,7 @@ func main() {
 		log.Printf("Shutting down...\n")
 	}()
 
-	db, err := sql.Open("sqlite", "my_app_database.db?_foreign_keys=on")
+	db, err := sql.Open("sqlite", "my_app_database.db?_fk=1")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error opening db connection: %s\n", err)
 		os.Exit(1)
@@ -44,16 +45,28 @@ func main() {
 		os.Exit(1)
 	}
 
-	messageStore, err := message.NewSQLiteMessageRepo(ctx, db)
-
+	roomStore, err := room.NewSQLiteRoomRepo(ctx, db)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error initialising user repo: %s\n", err)
+		fmt.Fprintf(os.Stderr, "error initialising room repo: %s\n", err)
+		os.Exit(1)
+	}
+
+	messageStore, err := message.NewSQLiteMessageRepo(ctx, db)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error initialising message repo: %s\n", err)
+		os.Exit(1)
+	}
+
+	roomMemberStore, err := chat.NewSQLiteRoomMemberRepo(ctx, db)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error initialising room member repo: %s\n", err)
 		os.Exit(1)
 	}
 
 	hub := ws.NewHub(ctx)
 	go hub.Cleanup()
-	chatService := chat.NewChatService(userStore, messageStore)
+
+	chatService := chat.NewChatService(userStore, roomStore, messageStore, roomMemberStore)
 	wsHandler := ws.NewWSHandler(hub, chatService)
 	handler := router.HandleRoutes(wsHandler, chatService)
 

@@ -3,13 +3,15 @@ package ws
 import (
 	"context"
 	"sync"
+
+	"github.com/ayushgpt01/chatRoomGo/internal/chat"
 )
 
 type Room struct {
 	id         string
 	register   chan *Client
 	unregister chan *Client
-	broadcast  chan []byte
+	broadcast  chan chat.ChatEvent
 	clients    map[*Client]bool
 	mu         sync.RWMutex
 

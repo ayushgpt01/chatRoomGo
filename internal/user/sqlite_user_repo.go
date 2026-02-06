@@ -60,10 +60,10 @@ func (s *SQLiteUserRepo) GetById(ctx context.Context, id UserId) (*User, error) 
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return &user, fmt.Errorf("GetById %d: no such user", id)
+			return nil, fmt.Errorf("GetById %d: no such user", id)
 		}
 
-		return &user, fmt.Errorf("GetById %d: %v", id, err)
+		return nil, fmt.Errorf("GetById %d: %v", id, err)
 	}
 
 	return &user, nil
@@ -80,40 +80,32 @@ func (s *SQLiteUserRepo) GetByUsername(ctx context.Context, username string) (*U
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return &user, fmt.Errorf("GetByUsername %s: no such user", username)
+			return nil, fmt.Errorf("GetByUsername %s: no such user", username)
 		}
 
-		return &user, fmt.Errorf("GetByUsername %s: %v", username, err)
+		return nil, fmt.Errorf("GetByUsername %s: %v", username, err)
 	}
 
 	return &user, nil
 }
 
 func (s *SQLiteUserRepo) Create(ctx context.Context, username string, name string) (UserId, error) {
-	var userId UserId
-
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
-		return userId, err
+		return 0, err
 	}
 	defer tx.Rollback()
 
-	stmt, err := tx.PrepareContext(ctx, "INSERT INTO users(name, user_name) VALUES(?, ?)")
+	res, err := tx.ExecContext(ctx, "INSERT INTO users(name, user_name) VALUES(?, ?)", name, username)
 	if err != nil {
-		return userId, err
-	}
-	defer stmt.Close()
-	res, err := stmt.ExecContext(ctx, name, username)
-	if err != nil {
-		return userId, err
+		return 0, err
 	}
 
-	err = tx.Commit()
-	if err != nil {
-		return userId, err
+	if err = tx.Commit(); err != nil {
+		return 0, err
 	}
 
-	userId, err = res.LastInsertId()
+	userId, err := res.LastInsertId()
 	return userId, err
 }
 
@@ -124,19 +116,12 @@ func (s *SQLiteUserRepo) UpdateName(ctx context.Context, id UserId, name string)
 	}
 	defer tx.Rollback()
 
-	stmt, err := tx.PrepareContext(ctx, "UPDATE users SET name = ? WHERE id = ?")
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-
-	res, err := stmt.ExecContext(ctx, name, id)
+	res, err := tx.ExecContext(ctx, "UPDATE users SET name = ? WHERE id = ?", name, id)
 	if err != nil {
 		return err
 	}
 
-	err = tx.Commit()
-	if err != nil {
+	if err = tx.Commit(); err != nil {
 		return err
 	}
 
@@ -159,19 +144,12 @@ func (s *SQLiteUserRepo) UpdateUsername(ctx context.Context, id UserId, username
 	}
 	defer tx.Rollback()
 
-	stmt, err := tx.PrepareContext(ctx, "UPDATE users SET user_name = ? WHERE id = ?")
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-
-	res, err := stmt.ExecContext(ctx, username, id)
+	res, err := tx.ExecContext(ctx, "UPDATE users SET user_name = ? WHERE id = ?", username, id)
 	if err != nil {
 		return err
 	}
 
-	err = tx.Commit()
-	if err != nil {
+	if err = tx.Commit(); err != nil {
 		return err
 	}
 
@@ -194,19 +172,12 @@ func (s *SQLiteUserRepo) DeleteById(ctx context.Context, id UserId) error {
 	}
 	defer tx.Rollback()
 
-	stmt, err := tx.PrepareContext(ctx, "DELETE FROM users WHERE id = ?")
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-
-	res, err := stmt.ExecContext(ctx, id)
+	res, err := tx.ExecContext(ctx, "DELETE FROM users WHERE id = ?", id)
 	if err != nil {
 		return err
 	}
 
-	err = tx.Commit()
-	if err != nil {
+	if err = tx.Commit(); err != nil {
 		return err
 	}
 

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/ayushgpt01/chatRoomGo/internal/chat"
 	"github.com/google/uuid"
 )
 
@@ -30,7 +31,7 @@ func (hub *Hub) AddRoom() string {
 		id:         id,
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
-		broadcast:  make(chan []byte),
+		broadcast:  make(chan chat.ChatEvent),
 		clients:    make(map[*Client]bool),
 		mu:         sync.RWMutex{},
 		ctx:        roomCtx,
@@ -104,7 +105,7 @@ func (hub *Hub) UnregisterClient(roomId string, client *Client) error {
 	return nil
 }
 
-func (hub *Hub) Broadcast(roomId string, msg []byte) error {
+func (hub *Hub) Broadcast(roomId string, evt chat.ChatEvent) error {
 	hub.mu.RLock()
 	room := hub.rooms[roomId]
 	hub.mu.RUnlock()
@@ -113,7 +114,7 @@ func (hub *Hub) Broadcast(roomId string, msg []byte) error {
 		return fmt.Errorf("No room found with id %s", roomId)
 	}
 
-	room.broadcast <- msg
+	room.broadcast <- evt
 	return nil
 }
 
