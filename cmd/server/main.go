@@ -39,29 +39,32 @@ func main() {
 	}
 
 	userStore, err := user.NewSqliteUserRepo(ctx, db)
-
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error initialising user repo: %s\n", err)
 		os.Exit(1)
 	}
+	log.Printf("Initialised User Repo\n")
 
 	roomStore, err := room.NewSQLiteRoomRepo(ctx, db)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error initialising room repo: %s\n", err)
 		os.Exit(1)
 	}
+	log.Printf("Initialised Room Repo\n")
 
 	messageStore, err := message.NewSQLiteMessageRepo(ctx, db)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error initialising message repo: %s\n", err)
 		os.Exit(1)
 	}
+	log.Printf("Initialised Message Repo\n")
 
 	roomMemberStore, err := chat.NewSQLiteRoomMemberRepo(ctx, db)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error initialising room member repo: %s\n", err)
 		os.Exit(1)
 	}
+	log.Printf("Initialised Room member Repo\n")
 
 	hub := ws.NewHub(ctx)
 	go hub.Cleanup()

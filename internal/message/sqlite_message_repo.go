@@ -7,6 +7,7 @@ import (
 
 	"github.com/ayushgpt01/chatRoomGo/internal/room"
 	"github.com/ayushgpt01/chatRoomGo/internal/user"
+	_ "modernc.org/sqlite"
 )
 
 type SQLiteMessageRepo struct {

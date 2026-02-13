@@ -113,7 +113,7 @@ func (s *SQLiteRoomMemberRepo) CountByRoomId(ctx context.Context, roomId room.Ro
 		return 0, err
 	}
 
-	return 0, nil
+	return count, nil
 }
 
 func (s *SQLiteRoomMemberRepo) GetByRoomId(ctx context.Context, roomId room.RoomId) ([]user.UserId, error) {
@@ -128,7 +128,7 @@ func (s *SQLiteRoomMemberRepo) GetByRoomId(ctx context.Context, roomId room.Room
 	var ids []user.UserId
 	for rows.Next() {
 		var id user.UserId
-		if err := rows.Scan(id); err != nil {
+		if err := rows.Scan(&id); err != nil {
 			return nil, err
 		}
 		ids = append(ids, id)

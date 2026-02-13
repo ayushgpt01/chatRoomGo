@@ -31,6 +31,8 @@ func recoverMiddleware(next http.Handler) http.Handler {
 }
 
 func HandleRoutes(wsHandler *ws.Wshandler, chatService *chat.ChatService) http.Handler {
+	log.Printf("Setting up routes...")
+
 	mux := http.NewServeMux()
 
 	handleAPIRoutes(mux, chatService)
