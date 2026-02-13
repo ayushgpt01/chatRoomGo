@@ -36,6 +36,7 @@ func (c *Client) readPump(hub *Hub, chatService *chat.ChatService) {
 
 		evt, err := chatService.HandleIncoming(hub.ctx, c.roomID, c.id, msg)
 		if err != nil {
+			c.send <- chat.NewErrorEvent(err)
 			continue
 		}
 
