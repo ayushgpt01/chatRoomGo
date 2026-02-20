@@ -1,58 +1,46 @@
 import { Link } from "@tanstack/react-router";
-import { Home, Menu, X } from "lucide-react";
-import { useState } from "react";
 
 export default function Header() {
-	const [isOpen, setIsOpen] = useState(false);
-
 	return (
-		<>
-			<header className="p-4 flex items-center bg-gray-800 text-white shadow-lg">
-				<button
-					onClick={() => setIsOpen(true)}
-					className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
-					aria-label="Open menu"
-					type="button"
-				>
-					<Menu size={24} />
-				</button>
-				<h1 className="ml-4 text-xl font-semibold">
-					<Link to="/">Home</Link>
-				</h1>
-			</header>
-
-			<aside
-				className={`fixed top-0 left-0 h-full w-80 bg-gray-900 text-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out flex flex-col ${
-					isOpen ? "translate-x-0" : "-translate-x-full"
-				}`}
-			>
-				<div className="flex items-center justify-between p-4 border-b border-gray-700">
-					<h2 className="text-xl font-bold">Navigation</h2>
+		<div className="navbar bg-base-100 shadow-sm">
+			<div className="navbar-start">
+				<div className="dropdown">
 					<button
-						onClick={() => setIsOpen(false)}
-						className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
-						aria-label="Close menu"
+						tabIndex={0}
 						type="button"
+						className="btn btn-ghost btn-circle"
 					>
-						<X size={24} />
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							className="h-5 w-5"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke="currentColor"
+						>
+							<title>Breadcrumb Menu</title>{" "}
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth="2"
+								d="M4 6h16M4 12h16M4 18h7"
+							/>{" "}
+						</svg>
 					</button>
-				</div>
-
-				<nav className="flex-1 p-4 overflow-y-auto">
-					<Link
-						to="/"
-						onClick={() => setIsOpen(false)}
-						className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 transition-colors mb-2"
-						activeProps={{
-							className:
-								"flex items-center gap-3 p-3 rounded-lg bg-cyan-600 hover:bg-cyan-700 transition-colors mb-2",
-						}}
+					<ul
+						tabIndex={-1}
+						className="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow"
 					>
-						<Home size={20} />
-						<span className="font-medium">Home</span>
-					</Link>
-				</nav>
-			</aside>
-		</>
+						<li>
+							<Link to="/">Homepage</Link>
+						</li>
+					</ul>
+				</div>
+			</div>
+			<div className="navbar-center">
+				<Link to="/" className="btn btn-ghost text-xl">
+					Chat Room
+				</Link>
+			</div>
+		</div>
 	);
 }
