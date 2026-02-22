@@ -1,8 +1,14 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useState } from "react";
 
 export const Route = createFileRoute("/rooms/$roomId")({
 	component: RouteComponent,
+	beforeLoad: ({ context }) => {
+		// Access auth via context, not the store directly
+		if (!context.auth.isAuthenticated) {
+			throw redirect({ to: "/login" });
+		}
+	},
 });
 
 let counter = 3;

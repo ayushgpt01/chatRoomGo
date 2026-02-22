@@ -27,6 +27,7 @@ func (s *SQLiteUserRepo) init(ctx context.Context) error {
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		name TEXT,
 		user_name VARCHAR(255) NOT NULL UNIQUE,
+		password_hash TEXT NOT NULL,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);`
@@ -89,19 +90,10 @@ func (s *SQLiteUserRepo) GetByUsername(ctx context.Context, username string) (*U
 	return &user, nil
 }
 
-func (s *SQLiteUserRepo) Create(ctx context.Context, username string, name string) (UserId, error) {
-	tx, err := s.db.BeginTx(ctx, nil)
+func (s *SQLiteUserRepo) Create(ctx context.Context, username, name, passwordHash string) (UserId, error) {
+	query := "INSERT INTO users(name, user_name, password_hash) VALUES(?, ?, ?)"
+	res, err := s.db.ExecContext(ctx, query, name, username, passwordHash)
 	if err != nil {
-		return 0, err
-	}
-	defer tx.Rollback()
-
-	res, err := tx.ExecContext(ctx, "INSERT INTO users(name, user_name) VALUES(?, ?)", name, username)
-	if err != nil {
-		return 0, err
-	}
-
-	if err = tx.Commit(); err != nil {
 		return 0, err
 	}
 
@@ -110,18 +102,8 @@ func (s *SQLiteUserRepo) Create(ctx context.Context, username string, name strin
 }
 
 func (s *SQLiteUserRepo) UpdateName(ctx context.Context, id UserId, name string) error {
-	tx, err := s.db.BeginTx(ctx, nil)
+	res, err := s.db.ExecContext(ctx, "UPDATE users SET name = ? WHERE id = ?", name, id)
 	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-	res, err := tx.ExecContext(ctx, "UPDATE users SET name = ? WHERE id = ?", name, id)
-	if err != nil {
-		return err
-	}
-
-	if err = tx.Commit(); err != nil {
 		return err
 	}
 
@@ -138,18 +120,8 @@ func (s *SQLiteUserRepo) UpdateName(ctx context.Context, id UserId, name string)
 }
 
 func (s *SQLiteUserRepo) UpdateUsername(ctx context.Context, id UserId, username string) error {
-	tx, err := s.db.BeginTx(ctx, nil)
+	res, err := s.db.ExecContext(ctx, "UPDATE users SET user_name = ? WHERE id = ?", username, id)
 	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-	res, err := tx.ExecContext(ctx, "UPDATE users SET user_name = ? WHERE id = ?", username, id)
-	if err != nil {
-		return err
-	}
-
-	if err = tx.Commit(); err != nil {
 		return err
 	}
 
@@ -166,18 +138,8 @@ func (s *SQLiteUserRepo) UpdateUsername(ctx context.Context, id UserId, username
 }
 
 func (s *SQLiteUserRepo) DeleteById(ctx context.Context, id UserId) error {
-	tx, err := s.db.BeginTx(ctx, nil)
+	res, err := s.db.ExecContext(ctx, "DELETE FROM users WHERE id = ?", id)
 	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-	res, err := tx.ExecContext(ctx, "DELETE FROM users WHERE id = ?", id)
-	if err != nil {
-		return err
-	}
-
-	if err = tx.Commit(); err != nil {
 		return err
 	}
 

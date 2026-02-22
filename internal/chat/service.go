@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/ayushgpt01/chatRoomGo/internal/dto"
 	"github.com/ayushgpt01/chatRoomGo/internal/message"
 	"github.com/ayushgpt01/chatRoomGo/internal/room"
 	"github.com/ayushgpt01/chatRoomGo/internal/user"
@@ -14,7 +13,7 @@ type eventHandler func(
 	ctx context.Context,
 	roomID room.RoomId,
 	userID user.UserId,
-	data dto.IncomingMessage,
+	data IncomingEvent,
 ) (ChatEvent, error)
 
 type ChatService struct {
@@ -54,7 +53,7 @@ func (srv *ChatService) HandleIncoming(
 	ctx context.Context,
 	roomIdStr string,
 	userIdStr string,
-	data dto.IncomingMessage,
+	data IncomingEvent,
 ) (ChatEvent, error) {
 
 	roomID, err := room.ParseRoomId(roomIdStr)
@@ -83,7 +82,7 @@ func (srv *ChatService) HandleIncoming(
 	return handler(ctx, roomID, userID, data)
 }
 
-func decodePayload(data dto.IncomingMessage, v any) error {
+func decodePayload(data IncomingEvent, v any) error {
 	if err := json.Unmarshal(data.Data, v); err != nil {
 		return ErrInvalidPayload
 	}
@@ -110,7 +109,7 @@ func (srv *ChatService) handleJoinRoom(
 	ctx context.Context,
 	roomID room.RoomId,
 	userID user.UserId,
-	_ dto.IncomingMessage,
+	_ IncomingEvent,
 ) (ChatEvent, error) {
 
 	if err := srv.roomMemberStore.JoinRoom(ctx, roomID, userID); err != nil {
@@ -130,7 +129,7 @@ func (srv *ChatService) handleLeaveRoom(
 	ctx context.Context,
 	roomID room.RoomId,
 	userID user.UserId,
-	_ dto.IncomingMessage,
+	_ IncomingEvent,
 ) (ChatEvent, error) {
 	if err := srv.roomMemberStore.LeaveRoom(ctx, roomID, userID); err != nil {
 		return nil, err
@@ -149,7 +148,7 @@ func (srv *ChatService) handleSendMessage(
 	ctx context.Context,
 	roomID room.RoomId,
 	userID user.UserId,
-	data dto.IncomingMessage,
+	data IncomingEvent,
 ) (ChatEvent, error) {
 
 	if err := srv.ensureMember(ctx, roomID, userID); err != nil {
@@ -184,7 +183,7 @@ func (srv *ChatService) handleEditMessage(
 	ctx context.Context,
 	roomID room.RoomId,
 	userID user.UserId,
-	data dto.IncomingMessage,
+	data IncomingEvent,
 ) (ChatEvent, error) {
 
 	if err := srv.ensureMember(ctx, roomID, userID); err != nil {
@@ -228,7 +227,7 @@ func (srv *ChatService) handleDeleteMessage(
 	ctx context.Context,
 	roomID room.RoomId,
 	userID user.UserId,
-	data dto.IncomingMessage,
+	data IncomingEvent,
 ) (ChatEvent, error) {
 	if err := srv.ensureMember(ctx, roomID, userID); err != nil {
 		return nil, err

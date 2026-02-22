@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 
 	"github.com/ayushgpt01/chatRoomGo/internal/chat"
-	"github.com/ayushgpt01/chatRoomGo/internal/dto"
 	"github.com/gorilla/websocket"
 )
 
@@ -27,7 +26,7 @@ func (c *Client) readPump(hub *Hub, chatService *chat.ChatService) {
 			return
 		}
 
-		var msg dto.IncomingMessage
+		var msg chat.IncomingEvent
 
 		err = json.Unmarshal(data, &msg)
 		if err != nil {
@@ -48,7 +47,7 @@ func (c *Client) writePump() {
 	defer c.conn.Close()
 
 	for evt := range c.send {
-		out := dto.OutgoingEvent{
+		out := chat.OutgoingEvent{
 			Type:    evt.Type(),
 			Payload: evt.Payload(),
 		}

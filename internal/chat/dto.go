@@ -1,8 +1,8 @@
-package dto
+package chat
 
 import "encoding/json"
 
-type IncomingMessage struct {
+type IncomingEvent struct {
 	Type string          `json:"type"`
 	Data json.RawMessage `json:"data"`
 }

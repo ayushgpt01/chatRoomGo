@@ -1,11 +1,14 @@
 import { createRouter as createTanStackRouter } from "@tanstack/react-router";
-import { getContext } from "./integrations/tanstack-query/root-provider";
+import { queryClient } from "./integrations/tanstack-query/root-provider";
 import { routeTree } from "./routeTree.gen";
+import type { AuthState } from "./stores/authStore";
 
 export const router = createTanStackRouter({
 	routeTree,
-	context: getContext(),
-
+	context: {
+		queryClient: queryClient,
+		auth: {} as AuthState,
+	},
 	scrollRestoration: true,
 	defaultPreload: "intent",
 	defaultPreloadStaleTime: 0,

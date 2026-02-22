@@ -4,7 +4,7 @@ import { authService } from "@/services/authService";
 import type { LoginCredentials, SignupCredentials, User } from "@/types/auth";
 import { getErrorMessage } from "@/utils/errorHandler";
 
-interface AuthState {
+export interface AuthState {
 	user: User | null;
 	isAuthenticated: boolean;
 	isAuthenticating: boolean;
@@ -56,7 +56,12 @@ const useAuthStore = create<AuthState>()(
 				}
 			},
 
-			logout: () => {
+			logout: async () => {
+				const refreshToken = localStorage.getItem("refresh_token");
+				if (refreshToken) {
+					await authService.logout(refreshToken);
+				}
+
 				localStorage.removeItem("token");
 				localStorage.removeItem("refresh_token");
 				set({ user: null, isAuthenticated: false, error: null });

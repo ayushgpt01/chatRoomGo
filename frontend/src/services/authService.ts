@@ -29,6 +29,10 @@ export const authService = {
 		return data;
 	},
 
+	logout: async (refreshToken: string): Promise<void> => {
+		await axiosClient.post<LoginResponse>("/auth/logout", { refreshToken });
+	},
+
 	getCurrentUser: async (): Promise<User> => {
 		const response = await axiosClient.get<User>("/auth/me");
 		return UserSchema.parse(response.data);

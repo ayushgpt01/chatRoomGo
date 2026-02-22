@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"testing"
 	"time"
+
+	"github.com/ayushgpt01/chatRoomGo/utils"
 )
 
 func setupTestRepo(t *testing.T) (*SQLiteUserRepo, *sql.DB) {
@@ -26,8 +28,12 @@ func setupTestRepo(t *testing.T) (*SQLiteUserRepo, *sql.DB) {
 func TestCreateAndGetUser(t *testing.T) {
 	repo, _ := setupTestRepo(t)
 	ctx := context.Background()
+	passwordHash, err := utils.HashPassword("Password")
+	if err != nil {
+		t.Fatalf("Hash failed: %v", err)
+	}
 
-	userID, err := repo.Create(ctx, "raiden", "Raiden")
+	userID, err := repo.Create(ctx, "raiden", "Raiden", passwordHash)
 	if err != nil {
 		t.Fatalf("create failed: %v", err)
 	}
@@ -54,13 +60,22 @@ func TestCreateAndGetUser(t *testing.T) {
 func TestCreateDuplicateUsernameFails(t *testing.T) {
 	repo, _ := setupTestRepo(t)
 	ctx := context.Background()
+	passwordHash, err := utils.HashPassword("Password")
+	if err != nil {
+		t.Fatalf("Hash failed: %v", err)
+	}
 
-	_, err := repo.Create(ctx, "raiden", "Raiden")
+	_, err = repo.Create(ctx, "raiden", "Raiden", passwordHash)
 	if err != nil {
 		t.Fatalf("first create failed: %v", err)
 	}
 
-	_, err = repo.Create(ctx, "raiden", "Another")
+	passwordHash, err = utils.HashPassword("Password2")
+	if err != nil {
+		t.Fatalf("Hash failed: %v", err)
+	}
+
+	_, err = repo.Create(ctx, "raiden", "Another", passwordHash)
 	if err == nil {
 		t.Fatalf("expected unique constraint error")
 	}
@@ -70,7 +85,12 @@ func TestUpdateNameUpdatesTimestamp(t *testing.T) {
 	repo, _ := setupTestRepo(t)
 	ctx := context.Background()
 
-	userID, err := repo.Create(ctx, "raiden", "Old Name")
+	passwordHash, err := utils.HashPassword("Password")
+	if err != nil {
+		t.Fatalf("Hash failed: %v", err)
+	}
+
+	userID, err := repo.Create(ctx, "raiden", "Old Name", passwordHash)
 	if err != nil {
 		t.Fatalf("create failed: %v", err)
 	}
@@ -104,7 +124,12 @@ func TestUpdateUsername(t *testing.T) {
 	repo, _ := setupTestRepo(t)
 	ctx := context.Background()
 
-	userID, err := repo.Create(ctx, "raiden", "Raiden")
+	passwordHash, err := utils.HashPassword("Password")
+	if err != nil {
+		t.Fatalf("Hash failed: %v", err)
+	}
+
+	userID, err := repo.Create(ctx, "raiden", "Raiden", passwordHash)
 	if err != nil {
 		t.Fatalf("create failed: %v", err)
 	}
@@ -127,7 +152,12 @@ func TestDeleteUser(t *testing.T) {
 	repo, _ := setupTestRepo(t)
 	ctx := context.Background()
 
-	userID, err := repo.Create(ctx, "raiden", "Raiden")
+	passwordHash, err := utils.HashPassword("Password")
+	if err != nil {
+		t.Fatalf("Hash failed: %v", err)
+	}
+
+	userID, err := repo.Create(ctx, "raiden", "Raiden", passwordHash)
 	if err != nil {
 		t.Fatalf("create failed: %v", err)
 	}

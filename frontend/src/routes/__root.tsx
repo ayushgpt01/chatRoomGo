@@ -4,15 +4,16 @@ import { createRootRouteWithContext, Outlet } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import NotFound from "@/components/NotFound";
 import TanStackQueryDevtools from "@/integrations/tanstack-query/devtools";
-import TanStackQueryProvider from "@/integrations/tanstack-query/root-provider";
+import type { AuthState } from "@/stores/authStore";
 
 interface MyRouterContext {
 	queryClient: QueryClient;
+	auth: AuthState;
 }
 
 export const Route = createRootRouteWithContext<MyRouterContext>()({
 	component: () => (
-		<TanStackQueryProvider>
+		<>
 			<Outlet />
 			<TanStackDevtools
 				config={{
@@ -26,7 +27,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 					TanStackQueryDevtools,
 				]}
 			/>
-		</TanStackQueryProvider>
+		</>
 	),
 	notFoundComponent: NotFound,
 });

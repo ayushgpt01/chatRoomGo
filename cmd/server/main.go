@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ayushgpt01/chatRoomGo/internal/auth"
 	"github.com/ayushgpt01/chatRoomGo/internal/chat"
 	"github.com/ayushgpt01/chatRoomGo/internal/message"
 	"github.com/ayushgpt01/chatRoomGo/internal/room"
@@ -66,12 +67,20 @@ func main() {
 	}
 	log.Printf("Initialised Room member Repo\n")
 
+	authStore, err := auth.NewSQLiteAuthRepo(ctx, db)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error initialising auth repo: %s\n", err)
+		os.Exit(1)
+	}
+	log.Printf("Initialised Auth Repo\n")
+
 	hub := ws.NewHub(ctx)
 	go hub.Cleanup()
 
+	authService := auth.NewAuthService(userStore, authStore)
 	chatService := chat.NewChatService(userStore, roomStore, messageStore, roomMemberStore)
 	wsHandler := ws.NewWSHandler(hub, chatService)
-	handler := router.HandleRoutes(wsHandler, chatService)
+	handler := router.HandleRoutes(wsHandler, chatService, authService)
 
 	httpServer := &http.Server{
 		Addr:    net.JoinHostPort(HOST, PORT),
@@ -82,6 +91,13 @@ func main() {
 		log.Printf("Listening on: %s\n", httpServer.Addr)
 		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			fmt.Fprintf(os.Stderr, "error listening to server: %s\n", err)
+		}
+	}()
+
+	go func() {
+		ticker := time.NewTicker(1 * time.Hour)
+		for range ticker.C {
+			authService.HandleCleanup(context.Background())
 		}
 	}()
 
