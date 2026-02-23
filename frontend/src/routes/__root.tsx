@@ -3,6 +3,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { createRootRouteWithContext, Outlet } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import NotFound from "@/components/NotFound";
+import ToastContainer from "@/components/ToastContainer";
 import TanStackQueryDevtools from "@/integrations/tanstack-query/devtools";
 import type { AuthState } from "@/stores/authStore";
 
@@ -15,6 +16,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 	component: () => (
 		<>
 			<Outlet />
+			<ToastContainer />
 			<TanStackDevtools
 				config={{
 					position: "bottom-right",

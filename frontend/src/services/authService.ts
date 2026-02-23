@@ -39,9 +39,10 @@ export const authService = {
 	},
 
 	signup: async (credentials: SignupCredentials): Promise<LoginResponse> => {
+		const { confirmPassword: _, ...payload } = credentials;
 		const response = await axiosClient.post<LoginResponse>(
 			"/auth/signup",
-			credentials,
+			payload,
 		);
 		const data = response.data;
 

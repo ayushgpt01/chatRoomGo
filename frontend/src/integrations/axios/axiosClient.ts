@@ -5,7 +5,7 @@ import useAuthStore from "@/stores/authStore";
 // 1. Determine the Base URL
 // This logic checks if we are in dev; if so, it uses the dev URL,
 // otherwise it defaults to the production string from your env.
-const baseURL = import.meta.env.VITE_API_URL;
+const baseURL = `${import.meta.env.VITE_API_URL}/api`;
 
 const axiosClient = axios.create({
 	baseURL: baseURL,
@@ -64,19 +64,21 @@ axiosClient.interceptors.response.use(
 					.catch((err) => Promise.reject(err));
 			}
 
+			const refreshToken = localStorage.getItem("refresh_token");
+
+			if (!refreshToken) {
+				useAuthStore.getState().logout();
+				return Promise.reject(error);
+			}
+
 			originalRequest._retry = true;
 			isRefreshing = true;
 
 			try {
-				const refreshToken = localStorage.getItem("refresh_token");
-
 				// Call your refresh endpoint
-				const { data } = await axios.post(
-					`${import.meta.env.VITE_API_URL}/auth/refresh`,
-					{
-						refreshToken,
-					},
-				);
+				const { data } = await axios.post(`${baseURL}/auth/refresh`, {
+					refreshToken,
+				});
 
 				const newToken = data.token;
 				localStorage.setItem("token", newToken);

@@ -104,11 +104,11 @@ func (srv *AuthService) HandleSignup(ctx context.Context, payload SignupPayload)
 func (srv *AuthService) HandleLogin(ctx context.Context, payload LoginPayload) (LoginResponse, error) {
 	user, err := srv.userStore.GetByUsername(ctx, payload.Username)
 	if err != nil {
-		return LoginResponse{}, fmt.Errorf("invalid credentials")
+		return LoginResponse{}, fmt.Errorf("no user like this")
 	}
 
 	if valid := utils.CheckPasswordHash(payload.Password, user.Password); !valid {
-		return LoginResponse{}, fmt.Errorf("invalid credentials")
+		return LoginResponse{}, fmt.Errorf("invalid password")
 	}
 
 	token, err := srv.generateAccessToken(user.Id)

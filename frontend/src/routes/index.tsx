@@ -1,12 +1,14 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import useAuthStore from "@/stores/authStore";
 
 export const Route = createFileRoute("/")({ component: App });
 
 function App() {
 	const navigate = useNavigate();
 	const [roomId, setRoomId] = useState("");
-	const isLoggedIn = false;
+	const isLoggedIn = useAuthStore((s) => s.isAuthenticated);
+	const logout = useAuthStore((s) => s.logout);
 
 	const joinRoom = () => {
 		if (!roomId.trim()) return;
@@ -37,27 +39,35 @@ function App() {
 						Join Room
 					</button>
 
-					{!isLoggedIn && <>
 					<div className="divider">or</div>
-
-					<div className="flex flex-col gap-2">
-						<button
-							type="button"
-							onClick={() => navigate({ to: "/login" })}
-							className="btn btn-outline w-full"
-						>
-							Login
-						</button>
-						<button
-							type="button"
-							onClick={() => navigate({ to: "/signup" })}
-							className="btn btn-secondary w-full"
-						>
-							Sign Up
-						</button>
-					</div>
-					</>}
-
+					{!isLoggedIn ? (
+						<div className="flex flex-col gap-2">
+							<button
+								type="button"
+								onClick={() => navigate({ to: "/login" })}
+								className="btn btn-outline w-full"
+							>
+								Login
+							</button>
+							<button
+								type="button"
+								onClick={() => navigate({ to: "/signup" })}
+								className="btn btn-secondary w-full"
+							>
+								Sign Up
+							</button>
+						</div>
+					) : (
+						<div className="flex flex-col gap-2">
+							<button
+								type="button"
+								onClick={logout}
+								className="btn btn-secondary w-full"
+							>
+								Logout
+							</button>
+						</div>
+					)}
 				</div>
 			</div>
 		</div>

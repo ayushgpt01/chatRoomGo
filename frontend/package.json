@@ -15,6 +15,7 @@
     "check": "biome check"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.2.2",
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/react-devtools": "^0.7.0",
     "@tanstack/react-query": "^5.66.5",
@@ -23,8 +24,10 @@
     "@tanstack/react-router-devtools": "^1.132.0",
     "axios": "^1.13.5",
     "lucide-react": "^0.545.0",
+    "nanoid": "^5.1.6",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "react-hook-form": "^7.71.2",
     "tailwindcss": "^4.1.18",
     "zod": "^4.3.6",
     "zustand": "^5.0.11"

@@ -73,11 +73,11 @@ func (s *SQLiteUserRepo) GetById(ctx context.Context, id UserId) (*User, error) 
 func (s *SQLiteUserRepo) GetByUsername(ctx context.Context, username string) (*User, error) {
 	var user User
 
-	row := s.db.QueryRowContext(ctx, `SELECT id, name, user_name, created_at, updated_at 
+	row := s.db.QueryRowContext(ctx, `SELECT id, name, user_name, created_at, updated_at, password_hash 
 	FROM users 
 	WHERE user_name = ?`, username)
 
-	err := row.Scan(&user.Id, &user.Name, &user.Username, &user.CreatedAt, &user.UpdatedAt)
+	err := row.Scan(&user.Id, &user.Name, &user.Username, &user.CreatedAt, &user.UpdatedAt, &user.Password)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
