@@ -8,13 +8,31 @@ import (
 
 type UserId = int64
 
+type AccountRole string
+
+const (
+	AccountRoleUser  AccountRole = "user"
+	AccountRoleGuest AccountRole = "guest"
+	AccountRoleAdmin AccountRole = "admin"
+)
+
+func (r AccountRole) IsValid() bool {
+	switch r {
+	case AccountRoleUser, AccountRoleGuest, AccountRoleAdmin:
+		return true
+	default:
+		return false
+	}
+}
+
 type User struct {
-	Id        UserId    `db:"id"`
-	Name      string    `db:"name"`
-	Username  string    `db:"user_name"`
-	Password  string    `db:"password"`
-	CreatedAt time.Time `db:"created_at"`
-	UpdatedAt time.Time `db:"updated_at"`
+	Id          UserId      `db:"id"`
+	Name        string      `db:"name"`
+	Username    string      `db:"user_name"`
+	Password    string      `db:"password"`
+	AccountRole AccountRole `db:"account_role"`
+	CreatedAt   time.Time   `db:"created_at"`
+	UpdatedAt   time.Time   `db:"updated_at"`
 }
 
 func ParseUserId(id string) (UserId, error) {

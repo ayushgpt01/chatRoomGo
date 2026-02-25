@@ -10,6 +10,7 @@ import (
 	"github.com/ayushgpt01/chatRoomGo/internal/user"
 	"github.com/ayushgpt01/chatRoomGo/utils"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 type AuthService struct {
@@ -61,13 +62,56 @@ func (srv *AuthService) generateRefreshToken() string {
 	return hex.EncodeToString(b)
 }
 
+func (srv *AuthService) HandleGuestSignup(ctx context.Context) (LoginResponse, error) {
+	shortId := uuid.New().String()[:8]
+
+	payload := SignupPayload{
+		Username: "guest" + shortId,
+		Password: "GUEST_PASS" + uuid.New().String(),
+		Name:     "Guest User " + shortId,
+	}
+
+	userId, err := srv.userStore.Create(ctx, payload.Username, payload.Name, payload.Password, user.AccountRoleGuest)
+	if err != nil {
+		return LoginResponse{}, err
+	}
+
+	user, err := srv.userStore.GetById(ctx, userId)
+	if err != nil {
+		return LoginResponse{}, err
+	}
+
+	token, err := srv.generateAccessToken(userId)
+	if err != nil {
+		return LoginResponse{}, err
+	}
+
+	refreshToken := srv.generateRefreshToken()
+	expiry := time.Now().Add(time.Hour * 24 * 7)
+
+	err = srv.authStore.SaveRefreshToken(ctx, userId, refreshToken, expiry)
+	if err != nil {
+		return LoginResponse{}, err
+	}
+
+	return LoginResponse{
+		User: ResponseUser{
+			Id:       user.Id,
+			Username: user.Username,
+			Name:     user.Name,
+		},
+		Token:        token,
+		RefreshToken: refreshToken,
+	}, nil
+}
+
 func (srv *AuthService) HandleSignup(ctx context.Context, payload SignupPayload) (LoginResponse, error) {
 	passwordHash, err := utils.HashPassword(payload.Password)
 	if err != nil {
 		return LoginResponse{}, err
 	}
 
-	userId, err := srv.userStore.Create(ctx, payload.Username, payload.Name, passwordHash)
+	userId, err := srv.userStore.Create(ctx, payload.Username, payload.Name, passwordHash, user.AccountRoleUser)
 	if err != nil {
 		return LoginResponse{}, err
 	}
@@ -102,16 +146,20 @@ func (srv *AuthService) HandleSignup(ctx context.Context, payload SignupPayload)
 }
 
 func (srv *AuthService) HandleLogin(ctx context.Context, payload LoginPayload) (LoginResponse, error) {
-	user, err := srv.userStore.GetByUsername(ctx, payload.Username)
+	u, err := srv.userStore.GetByUsername(ctx, payload.Username)
 	if err != nil {
 		return LoginResponse{}, fmt.Errorf("no user like this")
 	}
 
-	if valid := utils.CheckPasswordHash(payload.Password, user.Password); !valid {
+	if u.AccountRole == user.AccountRoleGuest {
+		return LoginResponse{}, fmt.Errorf("invalid credentials")
+	}
+
+	if valid := utils.CheckPasswordHash(payload.Password, u.Password); !valid {
 		return LoginResponse{}, fmt.Errorf("invalid password")
 	}
 
-	token, err := srv.generateAccessToken(user.Id)
+	token, err := srv.generateAccessToken(u.Id)
 	if err != nil {
 		return LoginResponse{}, err
 	}
@@ -119,16 +167,16 @@ func (srv *AuthService) HandleLogin(ctx context.Context, payload LoginPayload) (
 	refreshToken := srv.generateRefreshToken()
 	expiry := time.Now().Add(time.Hour * 24 * 7)
 
-	err = srv.authStore.SaveRefreshToken(ctx, user.Id, refreshToken, expiry)
+	err = srv.authStore.SaveRefreshToken(ctx, u.Id, refreshToken, expiry)
 	if err != nil {
 		return LoginResponse{}, err
 	}
 
 	return LoginResponse{
 		User: ResponseUser{
-			Id:       user.Id,
-			Username: user.Username,
-			Name:     user.Name,
+			Id:       u.Id,
+			Username: u.Username,
+			Name:     u.Name,
 		},
 		Token:        token,
 		RefreshToken: refreshToken,

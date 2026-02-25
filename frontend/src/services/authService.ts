@@ -7,7 +7,7 @@ import {
 } from "@/types/auth";
 
 // Define a specific interface for the API response
-interface LoginResponse {
+export interface LoginResponse {
 	user: User;
 	token: string;
 	refreshToken: string;

@@ -28,10 +28,30 @@ func (srv *AuthService) Middleware(next http.Handler) http.Handler {
 			return
 		}
 
-		// Add the userId to the context
 		ctx := context.WithValue(r.Context(), UserIDKey, userId)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
 
-		// Call the next handler with the new context
+func (srv *AuthService) OptionalMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		authHeader := r.Header.Get("Authorization")
+
+		// If no header, just move to the next handler with empty context
+		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+		userId, err := srv.getByAccessToken(tokenString)
+		if err != nil {
+			// Return 401 so the frontend Axios interceptor triggers a refresh
+			http.Error(w, "Unauthorized: Invalid token", http.StatusUnauthorized)
+			return
+		}
+
+		ctx := context.WithValue(r.Context(), UserIDKey, userId)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

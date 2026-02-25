@@ -4,6 +4,7 @@ export const UserSchema = z.object({
 	id: z.number(),
 	username: z.string().max(255),
 	name: z.string().min(2),
+	isAnonymous: z.boolean().optional(),
 });
 
 export type User = z.infer<typeof UserSchema>;

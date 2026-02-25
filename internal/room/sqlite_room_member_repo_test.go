@@ -1,4 +1,4 @@
-package chat
+package room
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func setupTestRepo(t *testing.T) (*SQLiteRoomMemberRepo, *sql.DB) {
+func setupTestRoomMemberRepo(t *testing.T) (*SQLiteRoomMemberRepo, *sql.DB) {
 	t.Helper()
 
 	db, err := sql.Open("sqlite", ":memory:")
@@ -40,7 +40,7 @@ func setupTestRepo(t *testing.T) (*SQLiteRoomMemberRepo, *sql.DB) {
 	return repo, db
 }
 
-func createUserAndRoom(t *testing.T, db *sql.DB) (int64, int64) {
+func createUserAndRoom(db *sql.DB) (int64, int64) {
 	res, _ := db.Exec("INSERT INTO users DEFAULT VALUES")
 	userID, _ := res.LastInsertId()
 
@@ -51,10 +51,10 @@ func createUserAndRoom(t *testing.T, db *sql.DB) (int64, int64) {
 }
 
 func TestJoinRoomAndExists(t *testing.T) {
-	repo, db := setupTestRepo(t)
+	repo, db := setupTestRoomMemberRepo(t)
 	ctx := context.Background()
 
-	userID, roomID := createUserAndRoom(t, db)
+	userID, roomID := createUserAndRoom(db)
 
 	if err := repo.JoinRoom(ctx, roomID, userID); err != nil {
 		t.Fatalf("join failed: %v", err)
@@ -71,10 +71,10 @@ func TestJoinRoomAndExists(t *testing.T) {
 }
 
 func TestJoinRoomDuplicateFails(t *testing.T) {
-	repo, db := setupTestRepo(t)
+	repo, db := setupTestRoomMemberRepo(t)
 	ctx := context.Background()
 
-	userID, roomID := createUserAndRoom(t, db)
+	userID, roomID := createUserAndRoom(db)
 
 	if err := repo.JoinRoom(ctx, roomID, userID); err != nil {
 		t.Fatalf("first join failed: %v", err)
@@ -87,10 +87,10 @@ func TestJoinRoomDuplicateFails(t *testing.T) {
 }
 
 func TestLeaveRoom(t *testing.T) {
-	repo, db := setupTestRepo(t)
+	repo, db := setupTestRoomMemberRepo(t)
 	ctx := context.Background()
 
-	userID, roomID := createUserAndRoom(t, db)
+	userID, roomID := createUserAndRoom(db)
 
 	if err := repo.JoinRoom(ctx, roomID, userID); err != nil {
 		t.Fatalf("join failed: %v", err)
@@ -107,10 +107,10 @@ func TestLeaveRoom(t *testing.T) {
 }
 
 func TestLeaveNonMemberFails(t *testing.T) {
-	repo, db := setupTestRepo(t)
+	repo, db := setupTestRoomMemberRepo(t)
 	ctx := context.Background()
 
-	userID, roomID := createUserAndRoom(t, db)
+	userID, roomID := createUserAndRoom(db)
 
 	err := repo.LeaveRoom(ctx, roomID, userID)
 	if err == nil {
@@ -119,7 +119,7 @@ func TestLeaveNonMemberFails(t *testing.T) {
 }
 
 func TestCountByRoomId(t *testing.T) {
-	repo, db := setupTestRepo(t)
+	repo, db := setupTestRoomMemberRepo(t)
 	ctx := context.Background()
 
 	// create 2 users
@@ -146,7 +146,7 @@ func TestCountByRoomId(t *testing.T) {
 }
 
 func TestGetByRoomId(t *testing.T) {
-	repo, db := setupTestRepo(t)
+	repo, db := setupTestRoomMemberRepo(t)
 	ctx := context.Background()
 
 	res, _ := db.Exec("INSERT INTO users DEFAULT VALUES")

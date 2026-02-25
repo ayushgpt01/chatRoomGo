@@ -1,24 +1,13 @@
-package chat
+package room
 
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 
-	"github.com/ayushgpt01/chatRoomGo/internal/room"
 	"github.com/ayushgpt01/chatRoomGo/internal/user"
-	"modernc.org/sqlite"
-	sqlite3 "modernc.org/sqlite/lib"
+	_ "modernc.org/sqlite"
 )
-
-type RoomMemberStore interface {
-	JoinRoom(ctx context.Context, roomId room.RoomId, userId user.UserId) error
-	LeaveRoom(ctx context.Context, roomId room.RoomId, userId user.UserId) error
-	Exists(ctx context.Context, roomId room.RoomId, userId user.UserId) (bool, error)
-	CountByRoomId(ctx context.Context, roomId room.RoomId) (int, error)
-	GetByRoomId(ctx context.Context, roomId room.RoomId) ([]user.UserId, error)
-}
 
 type SQLiteRoomMemberRepo struct {
 	db *sql.DB
@@ -57,23 +46,12 @@ func (s *SQLiteRoomMemberRepo) init(ctx context.Context) error {
 	return nil
 }
 
-func (s *SQLiteRoomMemberRepo) JoinRoom(ctx context.Context, roomId room.RoomId, userId user.UserId) error {
-	_, err := s.db.ExecContext(ctx, "INSERT INTO room_members(room_id, user_id) VALUES(?, ?)", roomId, userId)
-	if err != nil {
-		var sqliteErr *sqlite.Error
-		if errors.As(err, &sqliteErr) {
-			if sqliteErr.Code() == sqlite3.SQLITE_CONSTRAINT_PRIMARYKEY ||
-				sqliteErr.Code() == sqlite3.SQLITE_CONSTRAINT_UNIQUE {
-				return fmt.Errorf("user already in room")
-			}
-		}
-		return err
-	}
-
-	return nil
+func (s *SQLiteRoomMemberRepo) JoinRoom(ctx context.Context, roomId RoomId, userId user.UserId) error {
+	_, err := s.db.ExecContext(ctx, "INSERT OR IGNORE INTO room_members(room_id, user_id) VALUES(?, ?)", roomId, userId)
+	return err
 }
 
-func (s *SQLiteRoomMemberRepo) LeaveRoom(ctx context.Context, roomId room.RoomId, userId user.UserId) error {
+func (s *SQLiteRoomMemberRepo) LeaveRoom(ctx context.Context, roomId RoomId, userId user.UserId) error {
 	res, err := s.db.ExecContext(ctx, "DELETE FROM room_members WHERE room_id = ? AND user_id = ?", roomId, userId)
 	if err != nil {
 		return err
@@ -91,7 +69,7 @@ func (s *SQLiteRoomMemberRepo) LeaveRoom(ctx context.Context, roomId room.RoomId
 	return nil
 }
 
-func (s *SQLiteRoomMemberRepo) Exists(ctx context.Context, roomId room.RoomId, userId user.UserId) (bool, error) {
+func (s *SQLiteRoomMemberRepo) Exists(ctx context.Context, roomId RoomId, userId user.UserId) (bool, error) {
 	query := "SELECT EXISTS(SELECT 1 FROM room_members WHERE room_id = ? AND user_id = ?)"
 
 	var exists bool
@@ -104,7 +82,7 @@ func (s *SQLiteRoomMemberRepo) Exists(ctx context.Context, roomId room.RoomId, u
 	return exists, nil
 }
 
-func (s *SQLiteRoomMemberRepo) CountByRoomId(ctx context.Context, roomId room.RoomId) (int, error) {
+func (s *SQLiteRoomMemberRepo) CountByRoomId(ctx context.Context, roomId RoomId) (int, error) {
 	query := "SELECT COUNT(user_id) FROM room_members WHERE room_id = ?"
 	var count int
 
@@ -116,7 +94,7 @@ func (s *SQLiteRoomMemberRepo) CountByRoomId(ctx context.Context, roomId room.Ro
 	return count, nil
 }
 
-func (s *SQLiteRoomMemberRepo) GetByRoomId(ctx context.Context, roomId room.RoomId) ([]user.UserId, error) {
+func (s *SQLiteRoomMemberRepo) GetByRoomId(ctx context.Context, roomId RoomId) ([]user.UserId, error) {
 	query := "SELECT user_id FROM room_members WHERE room_id = ?"
 
 	rows, err := s.db.QueryContext(ctx, query, roomId)

@@ -28,6 +28,8 @@ func (s *SQLiteUserRepo) init(ctx context.Context) error {
 		name TEXT,
 		user_name VARCHAR(255) NOT NULL UNIQUE,
 		password_hash TEXT NOT NULL,
+		account_role TEXT NOT NULL DEFAULT 'user'
+			CHECK(account_role IN ('user', 'admin', 'guest')),
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);`
@@ -53,11 +55,11 @@ func (s *SQLiteUserRepo) init(ctx context.Context) error {
 func (s *SQLiteUserRepo) GetById(ctx context.Context, id UserId) (*User, error) {
 	var user User
 
-	row := s.db.QueryRowContext(ctx, `SELECT id, name, user_name, created_at, updated_at 
+	row := s.db.QueryRowContext(ctx, `SELECT id, name, user_name, created_at, updated_at, password_hash, account_role 
 	FROM users 
 	WHERE id = ?`, id)
 
-	err := row.Scan(&user.Id, &user.Name, &user.Username, &user.CreatedAt, &user.UpdatedAt)
+	err := row.Scan(&user.Id, &user.Name, &user.Username, &user.CreatedAt, &user.UpdatedAt, &user.Password, &user.AccountRole)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -73,11 +75,11 @@ func (s *SQLiteUserRepo) GetById(ctx context.Context, id UserId) (*User, error) 
 func (s *SQLiteUserRepo) GetByUsername(ctx context.Context, username string) (*User, error) {
 	var user User
 
-	row := s.db.QueryRowContext(ctx, `SELECT id, name, user_name, created_at, updated_at, password_hash 
+	row := s.db.QueryRowContext(ctx, `SELECT id, name, user_name, created_at, updated_at, password_hash, account_role 
 	FROM users 
 	WHERE user_name = ?`, username)
 
-	err := row.Scan(&user.Id, &user.Name, &user.Username, &user.CreatedAt, &user.UpdatedAt, &user.Password)
+	err := row.Scan(&user.Id, &user.Name, &user.Username, &user.CreatedAt, &user.UpdatedAt, &user.Password, &user.AccountRole)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -90,9 +92,13 @@ func (s *SQLiteUserRepo) GetByUsername(ctx context.Context, username string) (*U
 	return &user, nil
 }
 
-func (s *SQLiteUserRepo) Create(ctx context.Context, username, name, passwordHash string) (UserId, error) {
-	query := "INSERT INTO users(name, user_name, password_hash) VALUES(?, ?, ?)"
-	res, err := s.db.ExecContext(ctx, query, name, username, passwordHash)
+func (s *SQLiteUserRepo) Create(ctx context.Context, username, name, passwordHash string, role AccountRole) (UserId, error) {
+	if role == "" {
+		role = AccountRoleUser
+	}
+
+	query := "INSERT INTO users(name, user_name, password_hash, account_role) VALUES(?, ?, ?, ?)"
+	res, err := s.db.ExecContext(ctx, query, name, username, passwordHash, role)
 	if err != nil {
 		return 0, err
 	}

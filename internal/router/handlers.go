@@ -5,9 +5,10 @@ import (
 
 	"github.com/ayushgpt01/chatRoomGo/internal/auth"
 	"github.com/ayushgpt01/chatRoomGo/internal/chat"
+	"github.com/ayushgpt01/chatRoomGo/internal/room"
 )
 
-func handleAPIRoutes(mux *http.ServeMux, chatService *chat.ChatService, authService *auth.AuthService) {
+func handleAPIRoutes(mux *http.ServeMux, chatService *chat.ChatService, authService *auth.AuthService, roomService *room.RoomService) {
 	apiMux := http.NewServeMux()
 
 	// Public Routes
@@ -15,14 +16,15 @@ func handleAPIRoutes(mux *http.ServeMux, chatService *chat.ChatService, authServ
 	apiMux.Handle("POST /auth/signup", auth.HandleSignup(authService))
 	apiMux.Handle("POST /auth/refresh", auth.HandleRefresh(authService))
 
+	// Allows guest as well
+	apiMux.Handle("POST /room/join", authService.OptionalMiddleware(room.HandleJoinRoom(roomService)))
+
 	protectedMux := http.NewServeMux()
 
 	// Protected Routes
 	protectedMux.Handle("GET /auth/me", auth.HandleMe(authService))
 	protectedMux.Handle("POST /auth/logout", auth.HandleLogout(authService))
-	// protectedMux.Handle("POST /rooms", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
-	// protectedMux.Handle("POST /rooms/join", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
-	// protectedMux.Handle("GET /rooms/{id}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	protectedMux.Handle("POST /room/leave", room.HandleLeaveRoom(roomService))
 
 	apiMux.Handle("/", authService.Middleware(protectedMux))
 

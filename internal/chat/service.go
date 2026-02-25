@@ -20,7 +20,7 @@ type ChatService struct {
 	userStore       user.UserStore
 	roomStore       room.RoomStore
 	messageStore    message.MessageStore
-	roomMemberStore RoomMemberStore
+	roomMemberStore room.RoomMemberStore
 
 	handlers map[IncomingEventType]eventHandler
 }
@@ -29,7 +29,7 @@ func NewChatService(
 	userStore user.UserStore,
 	roomStore room.RoomStore,
 	messageStore message.MessageStore,
-	roomMemberStore RoomMemberStore,
+	roomMemberStore room.RoomMemberStore,
 ) *ChatService {
 
 	srv := &ChatService{

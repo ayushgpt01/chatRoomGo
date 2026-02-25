@@ -1,18 +1,48 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import useAuthStore from "@/stores/authStore";
+import useRoomStore from "@/stores/roomStore";
+import useToastStore from "@/stores/toastStore";
 
 export const Route = createFileRoute("/")({ component: App });
 
 function App() {
 	const navigate = useNavigate();
 	const [roomId, setRoomId] = useState("");
+	const [error, setError] = useState<string | null>(null);
+
 	const isLoggedIn = useAuthStore((s) => s.isAuthenticated);
 	const logout = useAuthStore((s) => s.logout);
+	const setAuth = useAuthStore((s) => s.setAuth);
 
-	const joinRoom = () => {
-		if (!roomId.trim()) return;
-		navigate({ to: "/rooms/$roomId", params: { roomId } });
+	const join = useRoomStore((s) => s.join);
+
+	const showToast = useToastStore((s) => s.show);
+
+	const joinRoom = async () => {
+		const id = Number(roomId);
+
+		if (Number.isNaN(id)) {
+			setError("Invalid room id");
+			return;
+		}
+
+		try {
+			const res = await join(id);
+
+			if (res.login) {
+				setAuth(res.login);
+			}
+
+			showToast("Logged in successfully", "success");
+			navigate({ to: "/rooms/$roomId", params: { roomId } });
+		} catch (err) {
+			showToast(
+				err instanceof Error ? err.message : "Could not join the room",
+				"error",
+			);
+			console.error(err);
+		}
 	};
 
 	return (
@@ -25,10 +55,17 @@ function App() {
 						<input
 							type="text"
 							placeholder="Enter Room ID"
-							className="input input-bordered w-full"
+							className={`input input-bordered w-full ${
+								error ? "input-error" : ""
+							}`}
 							value={roomId}
 							onChange={(e) => setRoomId(e.target.value)}
 						/>
+						{error && (
+							<p className="text-error text-sm mt-1">
+								{error || "Please enter a valid room id"}
+							</p>
+						)}
 					</div>
 
 					<button

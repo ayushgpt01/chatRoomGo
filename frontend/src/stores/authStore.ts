@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { authService } from "@/services/authService";
+import { authService, type LoginResponse } from "@/services/authService";
 import type { LoginCredentials, SignupCredentials, User } from "@/types/auth";
 import { getErrorMessage } from "@/utils/errorHandler";
 
@@ -10,6 +10,7 @@ export interface AuthState {
 	isAuthenticating: boolean;
 	isCreating: boolean;
 	error: string | null;
+	setAuth: (loginDetails: LoginResponse) => void;
 	login: (credentials: LoginCredentials) => Promise<void>;
 	logout: () => void;
 	signup: (credentials: SignupCredentials) => Promise<void>;
@@ -24,6 +25,12 @@ const useAuthStore = create<AuthState>()(
 			isAuthenticating: false,
 			isCreating: false,
 			error: null,
+
+			setAuth: ({ refreshToken, token, user }) => {
+				localStorage.setItem("token", token);
+				localStorage.setItem("refresh_token", refreshToken);
+				set({ user, isAuthenticated: true });
+			},
 
 			login: async (credentials) => {
 				set({ isAuthenticating: true, error: null });

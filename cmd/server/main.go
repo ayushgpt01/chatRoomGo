@@ -62,7 +62,7 @@ func main() {
 	}
 	log.Printf("Initialised Message Repo\n")
 
-	roomMemberStore, err := chat.NewSQLiteRoomMemberRepo(ctx, db)
+	roomMemberStore, err := room.NewSQLiteRoomMemberRepo(ctx, db)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error initialising room member repo: %s\n", err)
 		os.Exit(1)
@@ -81,8 +81,9 @@ func main() {
 
 	authService := auth.NewAuthService(userStore, authStore)
 	chatService := chat.NewChatService(userStore, roomStore, messageStore, roomMemberStore)
+	roomService := room.NewRoomService(roomMemberStore, roomStore, authService)
 	wsHandler := ws.NewWSHandler(hub, chatService)
-	handler := router.HandleRoutes(wsHandler, chatService, authService)
+	handler := router.HandleRoutes(wsHandler, chatService, authService, roomService)
 
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:3000"},
