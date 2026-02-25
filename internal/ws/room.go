@@ -2,18 +2,17 @@ package ws
 
 import (
 	"context"
-	"sync"
 
-	"github.com/ayushgpt01/chatRoomGo/internal/chat"
+	"github.com/ayushgpt01/chatRoomGo/internal/room"
+	"github.com/ayushgpt01/chatRoomGo/internal/types"
 )
 
 type Room struct {
-	id         string
+	id         room.RoomId
 	register   chan *Client
 	unregister chan *Client
-	broadcast  chan chat.ChatEvent
+	broadcast  chan types.ChatEvent
 	clients    map[*Client]bool
-	mu         sync.RWMutex
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -28,19 +27,13 @@ func (r *Room) Run() {
 			return
 
 		case client := <-r.register:
-			r.mu.Lock()
 			r.clients[client] = true
-			r.mu.Unlock()
 
 		case client := <-r.unregister:
-			r.mu.Lock()
 			delete(r.clients, client)
 			close(client.send)
-			r.mu.Unlock()
 
 		case msg := <-r.broadcast:
-			r.mu.RLock()
-
 			for client := range r.clients {
 				select {
 				case client.send <- msg:
@@ -48,16 +41,11 @@ func (r *Room) Run() {
 					// Dropping slow clients. Need to handle later
 				}
 			}
-
-			r.mu.RUnlock()
 		}
 	}
 }
 
 func (room *Room) Cleanup() {
-	room.mu.Lock()
-	defer room.mu.Unlock()
-
 	for client := range room.clients {
 		close(client.send)
 	}

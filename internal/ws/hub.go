@@ -6,55 +6,53 @@ import (
 	"log"
 	"sync"
 
-	"github.com/ayushgpt01/chatRoomGo/internal/chat"
-	"github.com/google/uuid"
+	"github.com/ayushgpt01/chatRoomGo/internal/room"
+	"github.com/ayushgpt01/chatRoomGo/internal/types"
 )
 
 type Hub struct {
 	ctx   context.Context
-	rooms map[string]*Room
+	rooms map[room.RoomId]*Room
 	mu    sync.RWMutex
 }
 
 func NewHub(ctx context.Context) *Hub {
 	return &Hub{
 		ctx:   ctx,
-		rooms: make(map[string]*Room),
+		rooms: make(map[room.RoomId]*Room),
 		mu:    sync.RWMutex{},
 	}
 }
 
-func (hub *Hub) AddRoom() string {
-	id := uuid.NewString()
+func (hub *Hub) AddRoom(roomId room.RoomId) room.RoomId {
 	roomCtx, roomCancel := context.WithCancel(hub.ctx)
 
 	room := &Room{
-		id:         id,
+		id:         roomId,
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
-		broadcast:  make(chan chat.ChatEvent),
+		broadcast:  make(chan types.ChatEvent),
 		clients:    make(map[*Client]bool),
-		mu:         sync.RWMutex{},
 		ctx:        roomCtx,
 		cancel:     roomCancel,
 	}
 
 	hub.mu.Lock()
-	hub.rooms[id] = room
+	hub.rooms[roomId] = room
 	hub.mu.Unlock()
 
 	go room.Run()
 
-	return id
+	return roomId
 }
 
-func (hub *Hub) DeleteRoom(id string) error {
+func (hub *Hub) DeleteRoom(id room.RoomId) error {
 	hub.mu.Lock()
 	defer hub.mu.Unlock()
 
 	room := hub.rooms[id]
 	if room == nil {
-		return fmt.Errorf("No room found with id %s", id)
+		return fmt.Errorf("No room found with id %d", id)
 	}
 
 	room.cancel()
@@ -62,57 +60,57 @@ func (hub *Hub) DeleteRoom(id string) error {
 	return nil
 }
 
-func (hub *Hub) GetRoom(id string) (*Room, error) {
+func (hub *Hub) GetRoom(id room.RoomId) (*Room, error) {
 	hub.mu.RLock()
 	defer hub.mu.RUnlock()
 
 	if hub.rooms[id] == nil {
-		return nil, fmt.Errorf("No room found with id %s", id)
+		return nil, fmt.Errorf("No room found with id %d", id)
 	}
 
 	return hub.rooms[id], nil
 }
 
-func (hub *Hub) RoomExists(id string) bool {
+func (hub *Hub) RoomExists(id room.RoomId) bool {
 	hub.mu.RLock()
 	defer hub.mu.RUnlock()
 
 	return hub.rooms[id] != nil
 }
 
-func (hub *Hub) RegisterClient(roomId string, client *Client) error {
+func (hub *Hub) RegisterClient(roomId room.RoomId, client *Client) error {
 	hub.mu.RLock()
 	room := hub.rooms[roomId]
 	hub.mu.RUnlock()
 
 	if room == nil {
-		return fmt.Errorf("No room found with id %s", roomId)
+		return fmt.Errorf("No room found with id %d", roomId)
 	}
 
 	room.register <- client
 	return nil
 }
 
-func (hub *Hub) UnregisterClient(roomId string, client *Client) error {
+func (hub *Hub) UnregisterClient(roomId room.RoomId, client *Client) error {
 	hub.mu.RLock()
 	room := hub.rooms[roomId]
 	hub.mu.RUnlock()
 
 	if room == nil {
-		return fmt.Errorf("No room found with id %s", roomId)
+		return fmt.Errorf("No room found with id %d", roomId)
 	}
 
 	room.unregister <- client
 	return nil
 }
 
-func (hub *Hub) Broadcast(roomId string, evt chat.ChatEvent) error {
+func (hub *Hub) Broadcast(roomId room.RoomId, evt types.ChatEvent) error {
 	hub.mu.RLock()
 	room := hub.rooms[roomId]
 	hub.mu.RUnlock()
 
 	if room == nil {
-		return fmt.Errorf("No room found with id %s", roomId)
+		return fmt.Errorf("No room found with id %d", roomId)
 	}
 
 	room.broadcast <- evt

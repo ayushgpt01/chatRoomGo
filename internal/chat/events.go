@@ -1,54 +1,18 @@
 package chat
 
-import "log"
+import (
+	"log"
 
-type IncomingEventType string
-
-const (
-	EventSendMessage   IncomingEventType = "send_message"
-	EventJoinRoom      IncomingEventType = "join_room"
-	EventLeaveRoom     IncomingEventType = "leave_room"
-	EventEditMessage   IncomingEventType = "edit_message"
-	EventDeleteMessage IncomingEventType = "delete_message"
+	"github.com/ayushgpt01/chatRoomGo/internal/types"
 )
 
-type OutgoingEventType string
-
-const (
-	EventMessageCreated OutgoingEventType = "message_created"
-	EventMessageUpdated OutgoingEventType = "message_updated"
-	EventMessageDeleted OutgoingEventType = "message_deleted"
-	EventUserJoinedRoom OutgoingEventType = "user_joined_room"
-	EventUserLeftRoom   OutgoingEventType = "user_left_room"
-
-	EventError OutgoingEventType = "error"
-)
-
-type ChatEvent interface {
-	Type() string
-	Payload() any
-}
-
-type BaseEvent struct {
-	eventType OutgoingEventType
-	payload   any
-}
-
-func (e *BaseEvent) Type() string {
-	return string(e.eventType)
-}
-
-func (e *BaseEvent) Payload() any {
-	return e.payload
-}
-
-func NewErrorEvent(err error) ChatEvent {
+func NewErrorEvent(err error) types.ChatEvent {
 	code, message := mapErrorCode(err)
 	log.Printf("[Error Event]: %s", err)
 
-	return &BaseEvent{
-		eventType: EventError,
-		payload: map[string]any{
+	return &types.BaseEvent{
+		EventType: types.EventError,
+		Data: map[string]any{
 			"message": message,
 			"code":    code,
 		},

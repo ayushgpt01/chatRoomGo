@@ -4,7 +4,11 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/ayushgpt01/chatRoomGo/internal/auth"
 	"github.com/ayushgpt01/chatRoomGo/internal/chat"
+	"github.com/ayushgpt01/chatRoomGo/internal/room"
+	"github.com/ayushgpt01/chatRoomGo/internal/types"
+	"github.com/ayushgpt01/chatRoomGo/internal/user"
 	"github.com/gorilla/websocket"
 )
 
@@ -27,10 +31,15 @@ var upgrader = websocket.Upgrader{
 }
 
 func (h *Wshandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	roomId := r.URL.Query().Get("room")
-	user := r.URL.Query().Get("user")
+	roomIdStr := r.URL.Query().Get("room")
+	userID, ok := r.Context().Value(auth.UserIDKey).(user.UserId)
+	if !ok || userID == 0 {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 
-	if roomId == "" || user == "" {
+	roomId, err := room.ParseRoomId(roomIdStr)
+	if err != nil {
 		http.Error(w, "room and user required", http.StatusBadRequest)
 		return
 	}
@@ -46,9 +55,9 @@ func (h *Wshandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// create client
 	client := Client{
-		id:     user,
+		id:     userID,
 		conn:   ws,
-		send:   make(chan chat.ChatEvent),
+		send:   make(chan types.ChatEvent),
 		roomID: roomId,
 	}
 

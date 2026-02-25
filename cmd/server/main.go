@@ -81,7 +81,7 @@ func main() {
 
 	authService := auth.NewAuthService(userStore, authStore)
 	chatService := chat.NewChatService(userStore, roomStore, messageStore, roomMemberStore)
-	roomService := room.NewRoomService(roomMemberStore, roomStore, authService)
+	roomService := room.NewRoomService(roomMemberStore, roomStore, authService, hub)
 	wsHandler := ws.NewWSHandler(hub, chatService)
 	handler := router.HandleRoutes(wsHandler, chatService, authService, roomService)
 

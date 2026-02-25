@@ -2,16 +2,20 @@ package ws
 
 import (
 	"encoding/json"
+	"time"
 
 	"github.com/ayushgpt01/chatRoomGo/internal/chat"
+	"github.com/ayushgpt01/chatRoomGo/internal/room"
+	"github.com/ayushgpt01/chatRoomGo/internal/types"
+	"github.com/ayushgpt01/chatRoomGo/internal/user"
 	"github.com/gorilla/websocket"
 )
 
 type Client struct {
-	id     string
-	roomID string
+	id     user.UserId
+	roomID room.RoomId
 	conn   *websocket.Conn
-	send   chan chat.ChatEvent
+	send   chan types.ChatEvent
 }
 
 func (c *Client) readPump(hub *Hub, chatService *chat.ChatService) {
@@ -26,7 +30,7 @@ func (c *Client) readPump(hub *Hub, chatService *chat.ChatService) {
 			return
 		}
 
-		var msg chat.IncomingEvent
+		var msg types.IncomingEvent
 
 		err = json.Unmarshal(data, &msg)
 		if err != nil {
@@ -44,21 +48,33 @@ func (c *Client) readPump(hub *Hub, chatService *chat.ChatService) {
 }
 
 func (c *Client) writePump() {
-	defer c.conn.Close()
+	ticker := time.NewTicker(54 * time.Second)
+	defer func() {
+		ticker.Stop()
+		c.conn.Close()
+	}()
 
-	for evt := range c.send {
-		out := chat.OutgoingEvent{
-			Type:    evt.Type(),
-			Payload: evt.Payload(),
-		}
+	for {
+		select {
+		case evt, ok := <-c.send:
+			if !ok {
+				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+				return
+			}
 
-		data, err := json.Marshal(out)
-		if err != nil {
-			continue
-		}
+			type OutgoingEvent struct {
+				Type    string `json:"type"`
+				Payload any    `json:"payload"`
+			}
 
-		if err := c.conn.WriteMessage(websocket.TextMessage, data); err != nil {
-			return
+			c.conn.WriteJSON(OutgoingEvent{
+				Type:    evt.Type(),
+				Payload: evt.Payload(),
+			})
+		case <-ticker.C:
+			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				return
+			}
 		}
 	}
 }
