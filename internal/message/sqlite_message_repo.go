@@ -5,8 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/ayushgpt01/chatRoomGo/internal/room"
-	"github.com/ayushgpt01/chatRoomGo/internal/user"
+	"github.com/ayushgpt01/chatRoomGo/internal/models"
 	_ "modernc.org/sqlite"
 )
 
@@ -64,8 +63,8 @@ func (s *SQLiteMessageRepo) init(ctx context.Context) error {
 	return nil
 }
 
-func (s *SQLiteMessageRepo) GetById(ctx context.Context, id MessageId) (*Message, error) {
-	var message Message
+func (s *SQLiteMessageRepo) GetById(ctx context.Context, id models.MessageId) (*models.Message, error) {
+	var message models.Message
 
 	row := s.db.QueryRowContext(ctx, `SELECT id, content, user_id, room_id, created_at, updated_at
 	FROM messages
@@ -83,7 +82,7 @@ func (s *SQLiteMessageRepo) GetById(ctx context.Context, id MessageId) (*Message
 	return &message, nil
 }
 
-func (s *SQLiteMessageRepo) Create(ctx context.Context, roomId room.RoomId, userId user.UserId, content string) (MessageId, error) {
+func (s *SQLiteMessageRepo) Create(ctx context.Context, roomId models.RoomId, userId models.UserId, content string) (models.MessageId, error) {
 	res, err := s.db.ExecContext(ctx, "INSERT INTO messages(user_id, room_id, content) VALUES(?, ?, ?)", userId, roomId, content)
 	if err != nil {
 		return 0, err
@@ -93,7 +92,7 @@ func (s *SQLiteMessageRepo) Create(ctx context.Context, roomId room.RoomId, user
 	return messageId, err
 }
 
-func (s *SQLiteMessageRepo) DeleteById(ctx context.Context, id MessageId) error {
+func (s *SQLiteMessageRepo) DeleteById(ctx context.Context, id models.MessageId) error {
 	res, err := s.db.ExecContext(ctx, "DELETE FROM messages WHERE id = ?", id)
 	if err != nil {
 		return err
@@ -111,7 +110,7 @@ func (s *SQLiteMessageRepo) DeleteById(ctx context.Context, id MessageId) error 
 	return nil
 }
 
-func (s *SQLiteMessageRepo) UpdateContent(ctx context.Context, id MessageId, content string) error {
+func (s *SQLiteMessageRepo) UpdateContent(ctx context.Context, id models.MessageId, content string) error {
 	res, err := s.db.ExecContext(ctx, "UPDATE messages SET content = ? WHERE id = ?", content, id)
 	if err != nil {
 		return err

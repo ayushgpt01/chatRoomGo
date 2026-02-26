@@ -5,17 +5,17 @@ import (
 	"encoding/json"
 
 	"github.com/ayushgpt01/chatRoomGo/internal/message"
+	"github.com/ayushgpt01/chatRoomGo/internal/models"
 	"github.com/ayushgpt01/chatRoomGo/internal/room"
-	"github.com/ayushgpt01/chatRoomGo/internal/types"
 	"github.com/ayushgpt01/chatRoomGo/internal/user"
 )
 
 type eventHandler func(
 	ctx context.Context,
-	roomID room.RoomId,
-	userID user.UserId,
-	data types.IncomingEvent,
-) (types.ChatEvent, error)
+	roomID models.RoomId,
+	userID models.UserId,
+	data models.IncomingEvent,
+) (models.ChatEvent, error)
 
 type ChatService struct {
 	userStore       user.UserStore
@@ -23,7 +23,7 @@ type ChatService struct {
 	messageStore    message.MessageStore
 	roomMemberStore room.RoomMemberStore
 
-	handlers map[types.IncomingEventType]eventHandler
+	handlers map[models.IncomingEventType]eventHandler
 }
 
 func NewChatService(
@@ -37,24 +37,24 @@ func NewChatService(
 		roomStore:       roomStore,
 		messageStore:    messageStore,
 		roomMemberStore: roomMemberStore,
-		handlers:        make(map[types.IncomingEventType]eventHandler),
+		handlers:        make(map[models.IncomingEventType]eventHandler),
 	}
 
-	srv.handlers[types.EventJoinRoom] = srv.handleJoinRoom
-	srv.handlers[types.EventLeaveRoom] = srv.handleLeaveRoom
-	srv.handlers[types.EventSendMessage] = srv.handleSendMessage
-	srv.handlers[types.EventEditMessage] = srv.handleEditMessage
-	srv.handlers[types.EventDeleteMessage] = srv.handleDeleteMessage
+	srv.handlers[models.EventJoinRoom] = srv.handleJoinRoom
+	srv.handlers[models.EventLeaveRoom] = srv.handleLeaveRoom
+	srv.handlers[models.EventSendMessage] = srv.handleSendMessage
+	srv.handlers[models.EventEditMessage] = srv.handleEditMessage
+	srv.handlers[models.EventDeleteMessage] = srv.handleDeleteMessage
 
 	return srv
 }
 
 func (srv *ChatService) HandleIncoming(
 	ctx context.Context,
-	roomID room.RoomId,
-	userID user.UserId,
-	data types.IncomingEvent,
-) (types.ChatEvent, error) {
+	roomID models.RoomId,
+	userID models.UserId,
+	data models.IncomingEvent,
+) (models.ChatEvent, error) {
 	if _, err := srv.roomStore.GetById(ctx, roomID); err != nil {
 		return nil, err
 	}
@@ -63,7 +63,7 @@ func (srv *ChatService) HandleIncoming(
 		return nil, err
 	}
 
-	handler, ok := srv.handlers[types.IncomingEventType(data.Type)]
+	handler, ok := srv.handlers[models.IncomingEventType(data.Type)]
 	if !ok {
 		return nil, ErrUnsupportedEvent
 	}
@@ -71,7 +71,7 @@ func (srv *ChatService) HandleIncoming(
 	return handler(ctx, roomID, userID, data)
 }
 
-func decodePayload(data types.IncomingEvent, v any) error {
+func decodePayload(data models.IncomingEvent, v any) error {
 	if err := json.Unmarshal(data.Data, v); err != nil {
 		return ErrInvalidPayload
 	}
@@ -80,8 +80,8 @@ func decodePayload(data types.IncomingEvent, v any) error {
 
 func (srv *ChatService) ensureMember(
 	ctx context.Context,
-	roomID room.RoomId,
-	userID user.UserId,
+	roomID models.RoomId,
+	userID models.UserId,
 ) error {
 	exists, err := srv.roomMemberStore.Exists(ctx, roomID, userID)
 	if err != nil {
@@ -95,12 +95,12 @@ func (srv *ChatService) ensureMember(
 
 func (srv *ChatService) handleJoinRoom(
 	ctx context.Context,
-	roomID room.RoomId,
-	userID user.UserId,
-	_ types.IncomingEvent,
-) (types.ChatEvent, error) {
-	return &types.BaseEvent{
-		EventType: types.EventUserJoinedRoom,
+	roomID models.RoomId,
+	userID models.UserId,
+	_ models.IncomingEvent,
+) (models.ChatEvent, error) {
+	return &models.BaseEvent{
+		EventType: models.EventUserJoinedRoom,
 		Data: map[string]any{
 			"roomId": roomID,
 			"userId": userID,
@@ -110,12 +110,12 @@ func (srv *ChatService) handleJoinRoom(
 
 func (srv *ChatService) handleLeaveRoom(
 	ctx context.Context,
-	roomID room.RoomId,
-	userID user.UserId,
-	_ types.IncomingEvent,
-) (types.ChatEvent, error) {
-	return &types.BaseEvent{
-		EventType: types.EventUserLeftRoom,
+	roomID models.RoomId,
+	userID models.UserId,
+	_ models.IncomingEvent,
+) (models.ChatEvent, error) {
+	return &models.BaseEvent{
+		EventType: models.EventUserLeftRoom,
 		Data: map[string]any{
 			"roomId": roomID,
 			"userId": userID,
@@ -125,10 +125,10 @@ func (srv *ChatService) handleLeaveRoom(
 
 func (srv *ChatService) handleSendMessage(
 	ctx context.Context,
-	roomID room.RoomId,
-	userID user.UserId,
-	data types.IncomingEvent,
-) (types.ChatEvent, error) {
+	roomID models.RoomId,
+	userID models.UserId,
+	data models.IncomingEvent,
+) (models.ChatEvent, error) {
 	if err := srv.ensureMember(ctx, roomID, userID); err != nil {
 		return nil, err
 	}
@@ -151,25 +151,25 @@ func (srv *ChatService) handleSendMessage(
 		return nil, err
 	}
 
-	return &types.BaseEvent{
-		EventType: types.EventMessageCreated,
+	return &models.BaseEvent{
+		EventType: models.EventMessageCreated,
 		Data:      msg,
 	}, nil
 }
 
 func (srv *ChatService) handleEditMessage(
 	ctx context.Context,
-	roomID room.RoomId,
-	userID user.UserId,
-	data types.IncomingEvent,
-) (types.ChatEvent, error) {
+	roomID models.RoomId,
+	userID models.UserId,
+	data models.IncomingEvent,
+) (models.ChatEvent, error) {
 	if err := srv.ensureMember(ctx, roomID, userID); err != nil {
 		return nil, err
 	}
 
 	var payload struct {
-		MessageID message.MessageId `json:"messageId"`
-		Content   string            `json:"content"`
+		MessageID models.MessageId `json:"messageId"`
+		Content   string           `json:"content"`
 	}
 
 	if err := decodePayload(data, &payload); err != nil {
@@ -194,24 +194,24 @@ func (srv *ChatService) handleEditMessage(
 		return nil, err
 	}
 
-	return &types.BaseEvent{
-		EventType: types.EventMessageUpdated,
+	return &models.BaseEvent{
+		EventType: models.EventMessageUpdated,
 		Data:      updatedMsg,
 	}, nil
 }
 
 func (srv *ChatService) handleDeleteMessage(
 	ctx context.Context,
-	roomID room.RoomId,
-	userID user.UserId,
-	data types.IncomingEvent,
-) (types.ChatEvent, error) {
+	roomID models.RoomId,
+	userID models.UserId,
+	data models.IncomingEvent,
+) (models.ChatEvent, error) {
 	if err := srv.ensureMember(ctx, roomID, userID); err != nil {
 		return nil, err
 	}
 
 	var payload struct {
-		MessageID message.MessageId `json:"messageId"`
+		MessageID models.MessageId `json:"messageId"`
 	}
 
 	if err := decodePayload(data, &payload); err != nil {
@@ -231,8 +231,8 @@ func (srv *ChatService) handleDeleteMessage(
 		return nil, err
 	}
 
-	return &types.BaseEvent{
-		EventType: types.EventMessageDeleted,
+	return &models.BaseEvent{
+		EventType: models.EventMessageDeleted,
 		Data: map[string]any{
 			"messageId": payload.MessageID,
 			"roomId":    roomID,

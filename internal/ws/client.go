@@ -5,17 +5,15 @@ import (
 	"time"
 
 	"github.com/ayushgpt01/chatRoomGo/internal/chat"
-	"github.com/ayushgpt01/chatRoomGo/internal/room"
-	"github.com/ayushgpt01/chatRoomGo/internal/types"
-	"github.com/ayushgpt01/chatRoomGo/internal/user"
+	"github.com/ayushgpt01/chatRoomGo/internal/models"
 	"github.com/gorilla/websocket"
 )
 
 type Client struct {
-	id     user.UserId
-	roomID room.RoomId
+	id     models.UserId
+	roomID models.RoomId
 	conn   *websocket.Conn
-	send   chan types.ChatEvent
+	send   chan models.ChatEvent
 }
 
 func (c *Client) readPump(hub *Hub, chatService *chat.ChatService) {
@@ -30,7 +28,7 @@ func (c *Client) readPump(hub *Hub, chatService *chat.ChatService) {
 			return
 		}
 
-		var msg types.IncomingEvent
+		var msg models.IncomingEvent
 
 		err = json.Unmarshal(data, &msg)
 		if err != nil {

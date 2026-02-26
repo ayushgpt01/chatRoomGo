@@ -5,8 +5,16 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/ayushgpt01/chatRoomGo/internal/models"
 	_ "modernc.org/sqlite"
 )
+
+type RoomStore interface {
+	Create(ctx context.Context, name string) (models.RoomId, error)
+	GetById(ctx context.Context, roomId models.RoomId) (*models.Room, error)
+	UpdateName(ctx context.Context, roomId models.RoomId, name string) error
+	Delete(ctx context.Context, roomId models.RoomId) error
+}
 
 type SQLiteRoomRepo struct {
 	db *sql.DB
@@ -47,7 +55,7 @@ func (s *SQLiteRoomRepo) init(ctx context.Context) error {
 	return nil
 }
 
-func (s *SQLiteRoomRepo) Create(ctx context.Context, name string) (RoomId, error) {
+func (s *SQLiteRoomRepo) Create(ctx context.Context, name string) (models.RoomId, error) {
 	res, err := s.db.ExecContext(ctx, "INSERT INTO rooms(name) VALUES(?)", name)
 	if err != nil {
 		return 0, err
@@ -57,8 +65,8 @@ func (s *SQLiteRoomRepo) Create(ctx context.Context, name string) (RoomId, error
 	return roomId, err
 }
 
-func (s *SQLiteRoomRepo) GetById(ctx context.Context, roomId RoomId) (*Room, error) {
-	var room Room
+func (s *SQLiteRoomRepo) GetById(ctx context.Context, roomId models.RoomId) (*models.Room, error) {
+	var room models.Room
 	row := s.db.QueryRowContext(ctx, "SELECT id, name, created_at, updated_at FROM rooms WHERE id = ?", roomId)
 	err := row.Scan(&room.Id, &room.Name, &room.CreatedAt, &room.UpdatedAt)
 
@@ -73,7 +81,7 @@ func (s *SQLiteRoomRepo) GetById(ctx context.Context, roomId RoomId) (*Room, err
 	return &room, nil
 }
 
-func (s *SQLiteRoomRepo) UpdateName(ctx context.Context, roomId RoomId, name string) error {
+func (s *SQLiteRoomRepo) UpdateName(ctx context.Context, roomId models.RoomId, name string) error {
 	res, err := s.db.ExecContext(ctx, "UPDATE rooms SET name = ? WHERE id = ?", name, roomId)
 	if err != nil {
 		return err
@@ -91,7 +99,7 @@ func (s *SQLiteRoomRepo) UpdateName(ctx context.Context, roomId RoomId, name str
 	return nil
 }
 
-func (s *SQLiteRoomRepo) Delete(ctx context.Context, roomId RoomId) error {
+func (s *SQLiteRoomRepo) Delete(ctx context.Context, roomId models.RoomId) error {
 	res, err := s.db.ExecContext(ctx, "DELETE FROM rooms WHERE id = ?", roomId)
 	if err != nil {
 		return err

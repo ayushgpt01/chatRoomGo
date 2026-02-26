@@ -2,17 +2,17 @@ package room
 
 import (
 	"github.com/ayushgpt01/chatRoomGo/internal/auth"
-	"github.com/ayushgpt01/chatRoomGo/internal/user"
+	"github.com/ayushgpt01/chatRoomGo/internal/models"
 )
 
 type JoinRoomPayload struct {
-	Id     RoomId      `json:"roomId"`
-	UserId user.UserId `json:"userId"`
+	Id     models.RoomId `json:"roomId"`
+	UserId models.UserId `json:"userId"`
 }
 
 type ResponseRoom struct {
-	Id   RoomId `json:"id"`
-	Name string `json:"name"`
+	Id   models.RoomId `json:"id"`
+	Name string        `json:"name"`
 }
 
 type JoinRoomResponse struct {
@@ -21,12 +21,12 @@ type JoinRoomResponse struct {
 }
 
 type LeaveRoomPayload struct {
-	Id     RoomId      `json:"roomId"`
-	UserId user.UserId `json:"userId"`
+	Id     models.RoomId `json:"roomId"`
+	UserId models.UserId `json:"userId"`
 }
 
 type CreateRoomPayload struct {
-	UserId user.UserId `json:"userId"`
+	UserId models.UserId `json:"userId"`
 }
 
 type CreateRoomResponse struct {

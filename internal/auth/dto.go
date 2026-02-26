@@ -1,6 +1,6 @@
 package auth
 
-import "github.com/ayushgpt01/chatRoomGo/internal/user"
+import "github.com/ayushgpt01/chatRoomGo/internal/models"
 
 type SignupPayload struct {
 	Username string `json:"username"`
@@ -14,9 +14,9 @@ type LoginPayload struct {
 }
 
 type ResponseUser struct {
-	Id       user.UserId `json:"id"`
-	Username string      `json:"username"`
-	Name     string      `json:"name"`
+	Id       models.UserId `json:"id"`
+	Username string        `json:"username"`
+	Name     string        `json:"name"`
 }
 
 type LoginResponse struct {

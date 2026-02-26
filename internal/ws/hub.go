@@ -6,32 +6,31 @@ import (
 	"log"
 	"sync"
 
-	"github.com/ayushgpt01/chatRoomGo/internal/room"
-	"github.com/ayushgpt01/chatRoomGo/internal/types"
+	"github.com/ayushgpt01/chatRoomGo/internal/models"
 )
 
 type Hub struct {
 	ctx   context.Context
-	rooms map[room.RoomId]*Room
+	rooms map[models.RoomId]*Room
 	mu    sync.RWMutex
 }
 
 func NewHub(ctx context.Context) *Hub {
 	return &Hub{
 		ctx:   ctx,
-		rooms: make(map[room.RoomId]*Room),
+		rooms: make(map[models.RoomId]*Room),
 		mu:    sync.RWMutex{},
 	}
 }
 
-func (hub *Hub) AddRoom(roomId room.RoomId) room.RoomId {
+func (hub *Hub) AddRoom(roomId models.RoomId) models.RoomId {
 	roomCtx, roomCancel := context.WithCancel(hub.ctx)
 
 	room := &Room{
 		id:         roomId,
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
-		broadcast:  make(chan types.ChatEvent),
+		broadcast:  make(chan models.ChatEvent),
 		clients:    make(map[*Client]bool),
 		ctx:        roomCtx,
 		cancel:     roomCancel,
@@ -46,7 +45,7 @@ func (hub *Hub) AddRoom(roomId room.RoomId) room.RoomId {
 	return roomId
 }
 
-func (hub *Hub) DeleteRoom(id room.RoomId) error {
+func (hub *Hub) DeleteRoom(id models.RoomId) error {
 	hub.mu.Lock()
 	defer hub.mu.Unlock()
 
@@ -60,7 +59,7 @@ func (hub *Hub) DeleteRoom(id room.RoomId) error {
 	return nil
 }
 
-func (hub *Hub) GetRoom(id room.RoomId) (*Room, error) {
+func (hub *Hub) GetRoom(id models.RoomId) (*Room, error) {
 	hub.mu.RLock()
 	defer hub.mu.RUnlock()
 
@@ -71,14 +70,14 @@ func (hub *Hub) GetRoom(id room.RoomId) (*Room, error) {
 	return hub.rooms[id], nil
 }
 
-func (hub *Hub) RoomExists(id room.RoomId) bool {
+func (hub *Hub) RoomExists(id models.RoomId) bool {
 	hub.mu.RLock()
 	defer hub.mu.RUnlock()
 
 	return hub.rooms[id] != nil
 }
 
-func (hub *Hub) RegisterClient(roomId room.RoomId, client *Client) error {
+func (hub *Hub) RegisterClient(roomId models.RoomId, client *Client) error {
 	hub.mu.RLock()
 	room := hub.rooms[roomId]
 	hub.mu.RUnlock()
@@ -91,7 +90,7 @@ func (hub *Hub) RegisterClient(roomId room.RoomId, client *Client) error {
 	return nil
 }
 
-func (hub *Hub) UnregisterClient(roomId room.RoomId, client *Client) error {
+func (hub *Hub) UnregisterClient(roomId models.RoomId, client *Client) error {
 	hub.mu.RLock()
 	room := hub.rooms[roomId]
 	hub.mu.RUnlock()
@@ -104,7 +103,7 @@ func (hub *Hub) UnregisterClient(roomId room.RoomId, client *Client) error {
 	return nil
 }
 
-func (hub *Hub) Broadcast(roomId room.RoomId, evt types.ChatEvent) error {
+func (hub *Hub) Broadcast(roomId models.RoomId, evt models.ChatEvent) error {
 	hub.mu.RLock()
 	room := hub.rooms[roomId]
 	hub.mu.RUnlock()

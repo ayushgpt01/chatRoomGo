@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ayushgpt01/chatRoomGo/internal/models"
 	"github.com/ayushgpt01/chatRoomGo/utils"
 )
 
@@ -33,7 +34,7 @@ func TestCreateAndGetUser(t *testing.T) {
 		t.Fatalf("Hash failed: %v", err)
 	}
 
-	userID, err := repo.Create(ctx, "raiden", "Raiden", passwordHash, AccountRoleUser)
+	userID, err := repo.Create(ctx, "raiden", "Raiden", passwordHash, models.AccountRoleUser)
 	if err != nil {
 		t.Fatalf("create failed: %v", err)
 	}
@@ -65,7 +66,7 @@ func TestCreateDuplicateUsernameFails(t *testing.T) {
 		t.Fatalf("Hash failed: %v", err)
 	}
 
-	_, err = repo.Create(ctx, "raiden", "Raiden", passwordHash, AccountRoleUser)
+	_, err = repo.Create(ctx, "raiden", "Raiden", passwordHash, models.AccountRoleUser)
 	if err != nil {
 		t.Fatalf("first create failed: %v", err)
 	}
@@ -75,7 +76,7 @@ func TestCreateDuplicateUsernameFails(t *testing.T) {
 		t.Fatalf("Hash failed: %v", err)
 	}
 
-	_, err = repo.Create(ctx, "raiden", "Another", passwordHash, AccountRoleUser)
+	_, err = repo.Create(ctx, "raiden", "Another", passwordHash, models.AccountRoleUser)
 	if err == nil {
 		t.Fatalf("expected unique constraint error")
 	}
@@ -90,7 +91,7 @@ func TestUpdateNameUpdatesTimestamp(t *testing.T) {
 		t.Fatalf("Hash failed: %v", err)
 	}
 
-	userID, err := repo.Create(ctx, "raiden", "Old Name", passwordHash, AccountRoleUser)
+	userID, err := repo.Create(ctx, "raiden", "Old Name", passwordHash, models.AccountRoleUser)
 	if err != nil {
 		t.Fatalf("create failed: %v", err)
 	}
@@ -129,7 +130,7 @@ func TestUpdateUsername(t *testing.T) {
 		t.Fatalf("Hash failed: %v", err)
 	}
 
-	userID, err := repo.Create(ctx, "raiden", "Raiden", passwordHash, AccountRoleUser)
+	userID, err := repo.Create(ctx, "raiden", "Raiden", passwordHash, models.AccountRoleUser)
 	if err != nil {
 		t.Fatalf("create failed: %v", err)
 	}
@@ -157,7 +158,7 @@ func TestDeleteUser(t *testing.T) {
 		t.Fatalf("Hash failed: %v", err)
 	}
 
-	userID, err := repo.Create(ctx, "raiden", "Raiden", passwordHash, AccountRoleUser)
+	userID, err := repo.Create(ctx, "raiden", "Raiden", passwordHash, models.AccountRoleUser)
 	if err != nil {
 		t.Fatalf("create failed: %v", err)
 	}

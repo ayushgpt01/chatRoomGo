@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ayushgpt01/chatRoomGo/internal/models"
 	"github.com/ayushgpt01/chatRoomGo/internal/user"
 	"github.com/ayushgpt01/chatRoomGo/utils"
 	"github.com/golang-jwt/jwt/v5"
@@ -25,7 +26,7 @@ func NewAuthService(userStore user.UserStore, authStore AuthStore) *AuthService 
 	return &AuthService{userStore, authStore}
 }
 
-func (srv *AuthService) generateAccessToken(userId user.UserId) (string, error) {
+func (srv *AuthService) generateAccessToken(userId models.UserId) (string, error) {
 	claims := jwt.MapClaims{
 		"sub": userId,
 		"exp": time.Now().Add(time.Minute * 15).Unix(), // 15 mins
@@ -35,7 +36,7 @@ func (srv *AuthService) generateAccessToken(userId user.UserId) (string, error) 
 	return token.SignedString([]byte(SECRET_KEY))
 }
 
-func (srv *AuthService) getByAccessToken(tokenString string) (user.UserId, error) {
+func (srv *AuthService) getByAccessToken(tokenString string) (models.UserId, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
@@ -49,7 +50,7 @@ func (srv *AuthService) getByAccessToken(tokenString string) (user.UserId, error
 
 	if claims, ok := token.Claims.(jwt.MapClaims); ok {
 		if sub, ok := claims["sub"].(float64); ok {
-			return user.UserId(sub), nil
+			return models.UserId(sub), nil
 		}
 	}
 
@@ -71,7 +72,7 @@ func (srv *AuthService) HandleGuestSignup(ctx context.Context) (LoginResponse, e
 		Name:     "Guest User " + shortId,
 	}
 
-	userId, err := srv.userStore.Create(ctx, payload.Username, payload.Name, payload.Password, user.AccountRoleGuest)
+	userId, err := srv.userStore.Create(ctx, payload.Username, payload.Name, payload.Password, models.AccountRoleGuest)
 	if err != nil {
 		return LoginResponse{}, err
 	}
@@ -111,7 +112,7 @@ func (srv *AuthService) HandleSignup(ctx context.Context, payload SignupPayload)
 		return LoginResponse{}, err
 	}
 
-	userId, err := srv.userStore.Create(ctx, payload.Username, payload.Name, passwordHash, user.AccountRoleUser)
+	userId, err := srv.userStore.Create(ctx, payload.Username, payload.Name, passwordHash, models.AccountRoleUser)
 	if err != nil {
 		return LoginResponse{}, err
 	}
@@ -151,7 +152,7 @@ func (srv *AuthService) HandleLogin(ctx context.Context, payload LoginPayload) (
 		return LoginResponse{}, fmt.Errorf("no user like this")
 	}
 
-	if u.AccountRole == user.AccountRoleGuest {
+	if u.AccountRole == models.AccountRoleGuest {
 		return LoginResponse{}, fmt.Errorf("invalid credentials")
 	}
 

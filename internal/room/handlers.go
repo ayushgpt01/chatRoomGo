@@ -6,13 +6,13 @@ import (
 	"net/http"
 
 	"github.com/ayushgpt01/chatRoomGo/internal/auth"
-	"github.com/ayushgpt01/chatRoomGo/internal/user"
+	"github.com/ayushgpt01/chatRoomGo/internal/models"
 	"github.com/ayushgpt01/chatRoomGo/utils"
 )
 
 func HandleJoinRoom(srv *RoomService) http.Handler {
 	type Payload struct {
-		RoomId RoomId
+		RoomId models.RoomId
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var temp Payload
@@ -22,7 +22,7 @@ func HandleJoinRoom(srv *RoomService) http.Handler {
 			return
 		}
 
-		currentUserId, _ := r.Context().Value(auth.UserIDKey).(user.UserId)
+		currentUserId, _ := r.Context().Value(auth.UserIDKey).(models.UserId)
 
 		res, err := srv.HandleJoinRoom(r.Context(), JoinRoomPayload{
 			Id:     temp.RoomId,
@@ -48,7 +48,7 @@ func HandleJoinRoom(srv *RoomService) http.Handler {
 
 func HandleLeaveRoom(srv *RoomService) http.Handler {
 	type Payload struct {
-		RoomId RoomId
+		RoomId models.RoomId
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var temp Payload
@@ -58,7 +58,7 @@ func HandleLeaveRoom(srv *RoomService) http.Handler {
 			return
 		}
 
-		currentUserId, ok := r.Context().Value(auth.UserIDKey).(user.UserId)
+		currentUserId, ok := r.Context().Value(auth.UserIDKey).(models.UserId)
 		if !ok {
 			http.Error(w, "Server error", http.StatusInternalServerError)
 			return

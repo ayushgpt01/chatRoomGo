@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ayushgpt01/chatRoomGo/internal/user"
+	"github.com/ayushgpt01/chatRoomGo/internal/models"
 	_ "modernc.org/sqlite"
 )
 
 type AuthStore interface {
-	SaveRefreshToken(ctx context.Context, userId user.UserId, token string, expiresAt time.Time) error
-	ValidateRefreshToken(ctx context.Context, token string) (user.UserId, error)
+	SaveRefreshToken(ctx context.Context, userId models.UserId, token string, expiresAt time.Time) error
+	ValidateRefreshToken(ctx context.Context, token string) (models.UserId, error)
 	DeleteRefreshToken(ctx context.Context, token string) error
 	CleanupExpiredTokens(ctx context.Context) error
 }
@@ -47,7 +47,7 @@ func (s *SQLiteAuthRepo) init(ctx context.Context) error {
 	return nil
 }
 
-func (s *SQLiteAuthRepo) SaveRefreshToken(ctx context.Context, userId user.UserId, token string, expiresAt time.Time) error {
+func (s *SQLiteAuthRepo) SaveRefreshToken(ctx context.Context, userId models.UserId, token string, expiresAt time.Time) error {
 	_, err := s.db.ExecContext(ctx, "INSERT INTO refresh_tokens(user_id, token, expires_at) VALUES(?, ?, ?)", userId, token, expiresAt)
 	if err != nil {
 		return fmt.Errorf("SaveRefreshToken %d: %v", userId, err)
@@ -56,8 +56,8 @@ func (s *SQLiteAuthRepo) SaveRefreshToken(ctx context.Context, userId user.UserI
 	return nil
 }
 
-func (s *SQLiteAuthRepo) ValidateRefreshToken(ctx context.Context, token string) (user.UserId, error) {
-	var userId user.UserId
+func (s *SQLiteAuthRepo) ValidateRefreshToken(ctx context.Context, token string) (models.UserId, error) {
+	var userId models.UserId
 	row := s.db.QueryRowContext(ctx, "SELECT user_id FROM refresh_tokens WHERE token = ? AND expires_at > CURRENT_TIMESTAMP", token)
 
 	err := row.Scan(&userId)

@@ -4,17 +4,17 @@ import (
 	"context"
 
 	"github.com/ayushgpt01/chatRoomGo/internal/auth"
-	"github.com/ayushgpt01/chatRoomGo/internal/types"
+	"github.com/ayushgpt01/chatRoomGo/internal/models"
 )
 
 type RoomService struct {
 	roomMemberStore RoomMemberStore
 	roomStore       RoomStore
 	authService     *auth.AuthService
-	hub             types.HubBroadcaster
+	hub             models.HubBroadcaster
 }
 
-func NewRoomService(roomMemberStore RoomMemberStore, roomStore RoomStore, authService *auth.AuthService, hub types.HubBroadcaster) *RoomService {
+func NewRoomService(roomMemberStore RoomMemberStore, roomStore RoomStore, authService *auth.AuthService, hub models.HubBroadcaster) *RoomService {
 	return &RoomService{roomMemberStore, roomStore, authService, hub}
 }
 
@@ -41,8 +41,8 @@ func (srv *RoomService) HandleJoinRoom(ctx context.Context, payload JoinRoomPayl
 		return JoinRoomResponse{}, err
 	}
 
-	srv.hub.Broadcast(room.Id, &types.BaseEvent{
-		EventType: types.EventUserJoinedRoom,
+	srv.hub.Broadcast(room.Id, &models.BaseEvent{
+		EventType: models.EventUserJoinedRoom,
 		Data: map[string]any{
 			"roomId": room.Id,
 			"userId": targetUserId,
@@ -62,8 +62,8 @@ func (srv *RoomService) HandleLeaveRoom(ctx context.Context, payload LeaveRoomPa
 	err := srv.roomMemberStore.LeaveRoom(ctx, payload.Id, payload.UserId)
 
 	if err == nil {
-		srv.hub.Broadcast(payload.Id, &types.BaseEvent{
-			EventType: types.EventUserLeftRoom,
+		srv.hub.Broadcast(payload.Id, &models.BaseEvent{
+			EventType: models.EventUserLeftRoom,
 			Data: map[string]any{
 				"roomId": payload.Id,
 				"userId": payload.UserId,

@@ -3,15 +3,15 @@ package chat
 import (
 	"log"
 
-	"github.com/ayushgpt01/chatRoomGo/internal/types"
+	"github.com/ayushgpt01/chatRoomGo/internal/models"
 )
 
-func NewErrorEvent(err error) types.ChatEvent {
+func NewErrorEvent(err error) models.ChatEvent {
 	code, message := mapErrorCode(err)
 	log.Printf("[Error Event]: %s", err)
 
-	return &types.BaseEvent{
-		EventType: types.EventError,
+	return &models.BaseEvent{
+		EventType: models.EventError,
 		Data: map[string]any{
 			"message": message,
 			"code":    code,

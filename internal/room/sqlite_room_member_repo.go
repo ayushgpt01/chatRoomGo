@@ -5,9 +5,17 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/ayushgpt01/chatRoomGo/internal/user"
+	"github.com/ayushgpt01/chatRoomGo/internal/models"
 	_ "modernc.org/sqlite"
 )
+
+type RoomMemberStore interface {
+	JoinRoom(ctx context.Context, roomId models.RoomId, userId models.UserId) error
+	LeaveRoom(ctx context.Context, roomId models.RoomId, userId models.UserId) error
+	Exists(ctx context.Context, roomId models.RoomId, userId models.UserId) (bool, error)
+	CountByRoomId(ctx context.Context, roomId models.RoomId) (int, error)
+	GetByRoomId(ctx context.Context, roomId models.RoomId) ([]models.UserId, error)
+}
 
 type SQLiteRoomMemberRepo struct {
 	db *sql.DB
@@ -46,12 +54,12 @@ func (s *SQLiteRoomMemberRepo) init(ctx context.Context) error {
 	return nil
 }
 
-func (s *SQLiteRoomMemberRepo) JoinRoom(ctx context.Context, roomId RoomId, userId user.UserId) error {
+func (s *SQLiteRoomMemberRepo) JoinRoom(ctx context.Context, roomId models.RoomId, userId models.UserId) error {
 	_, err := s.db.ExecContext(ctx, "INSERT OR IGNORE INTO room_members(room_id, user_id) VALUES(?, ?)", roomId, userId)
 	return err
 }
 
-func (s *SQLiteRoomMemberRepo) LeaveRoom(ctx context.Context, roomId RoomId, userId user.UserId) error {
+func (s *SQLiteRoomMemberRepo) LeaveRoom(ctx context.Context, roomId models.RoomId, userId models.UserId) error {
 	res, err := s.db.ExecContext(ctx, "DELETE FROM room_members WHERE room_id = ? AND user_id = ?", roomId, userId)
 	if err != nil {
 		return err
@@ -69,7 +77,7 @@ func (s *SQLiteRoomMemberRepo) LeaveRoom(ctx context.Context, roomId RoomId, use
 	return nil
 }
 
-func (s *SQLiteRoomMemberRepo) Exists(ctx context.Context, roomId RoomId, userId user.UserId) (bool, error) {
+func (s *SQLiteRoomMemberRepo) Exists(ctx context.Context, roomId models.RoomId, userId models.UserId) (bool, error) {
 	query := "SELECT EXISTS(SELECT 1 FROM room_members WHERE room_id = ? AND user_id = ?)"
 
 	var exists bool
@@ -82,7 +90,7 @@ func (s *SQLiteRoomMemberRepo) Exists(ctx context.Context, roomId RoomId, userId
 	return exists, nil
 }
 
-func (s *SQLiteRoomMemberRepo) CountByRoomId(ctx context.Context, roomId RoomId) (int, error) {
+func (s *SQLiteRoomMemberRepo) CountByRoomId(ctx context.Context, roomId models.RoomId) (int, error) {
 	query := "SELECT COUNT(user_id) FROM room_members WHERE room_id = ?"
 	var count int
 
@@ -94,7 +102,7 @@ func (s *SQLiteRoomMemberRepo) CountByRoomId(ctx context.Context, roomId RoomId)
 	return count, nil
 }
 
-func (s *SQLiteRoomMemberRepo) GetByRoomId(ctx context.Context, roomId RoomId) ([]user.UserId, error) {
+func (s *SQLiteRoomMemberRepo) GetByRoomId(ctx context.Context, roomId models.RoomId) ([]models.UserId, error) {
 	query := "SELECT user_id FROM room_members WHERE room_id = ?"
 
 	rows, err := s.db.QueryContext(ctx, query, roomId)
@@ -103,9 +111,9 @@ func (s *SQLiteRoomMemberRepo) GetByRoomId(ctx context.Context, roomId RoomId) (
 	}
 	defer rows.Close()
 
-	var ids []user.UserId
+	var ids []models.UserId
 	for rows.Next() {
-		var id user.UserId
+		var id models.UserId
 		if err := rows.Scan(&id); err != nil {
 			return nil, err
 		}

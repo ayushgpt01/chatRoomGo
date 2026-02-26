@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/ayushgpt01/chatRoomGo/internal/models"
 	_ "modernc.org/sqlite"
 )
 
@@ -52,8 +53,8 @@ func (s *SQLiteUserRepo) init(ctx context.Context) error {
 	return nil
 }
 
-func (s *SQLiteUserRepo) GetById(ctx context.Context, id UserId) (*User, error) {
-	var user User
+func (s *SQLiteUserRepo) GetById(ctx context.Context, id models.UserId) (*models.User, error) {
+	var user models.User
 
 	row := s.db.QueryRowContext(ctx, `SELECT id, name, user_name, created_at, updated_at, password_hash, account_role 
 	FROM users 
@@ -72,8 +73,8 @@ func (s *SQLiteUserRepo) GetById(ctx context.Context, id UserId) (*User, error) 
 	return &user, nil
 }
 
-func (s *SQLiteUserRepo) GetByUsername(ctx context.Context, username string) (*User, error) {
-	var user User
+func (s *SQLiteUserRepo) GetByUsername(ctx context.Context, username string) (*models.User, error) {
+	var user models.User
 
 	row := s.db.QueryRowContext(ctx, `SELECT id, name, user_name, created_at, updated_at, password_hash, account_role 
 	FROM users 
@@ -92,9 +93,9 @@ func (s *SQLiteUserRepo) GetByUsername(ctx context.Context, username string) (*U
 	return &user, nil
 }
 
-func (s *SQLiteUserRepo) Create(ctx context.Context, username, name, passwordHash string, role AccountRole) (UserId, error) {
+func (s *SQLiteUserRepo) Create(ctx context.Context, username, name, passwordHash string, role models.AccountRole) (models.UserId, error) {
 	if role == "" {
-		role = AccountRoleUser
+		role = models.AccountRoleUser
 	}
 
 	query := "INSERT INTO users(name, user_name, password_hash, account_role) VALUES(?, ?, ?, ?)"
@@ -107,7 +108,7 @@ func (s *SQLiteUserRepo) Create(ctx context.Context, username, name, passwordHas
 	return userId, err
 }
 
-func (s *SQLiteUserRepo) UpdateName(ctx context.Context, id UserId, name string) error {
+func (s *SQLiteUserRepo) UpdateName(ctx context.Context, id models.UserId, name string) error {
 	res, err := s.db.ExecContext(ctx, "UPDATE users SET name = ? WHERE id = ?", name, id)
 	if err != nil {
 		return err
@@ -125,7 +126,7 @@ func (s *SQLiteUserRepo) UpdateName(ctx context.Context, id UserId, name string)
 	return nil
 }
 
-func (s *SQLiteUserRepo) UpdateUsername(ctx context.Context, id UserId, username string) error {
+func (s *SQLiteUserRepo) UpdateUsername(ctx context.Context, id models.UserId, username string) error {
 	res, err := s.db.ExecContext(ctx, "UPDATE users SET user_name = ? WHERE id = ?", username, id)
 	if err != nil {
 		return err
@@ -143,7 +144,7 @@ func (s *SQLiteUserRepo) UpdateUsername(ctx context.Context, id UserId, username
 	return nil
 }
 
-func (s *SQLiteUserRepo) DeleteById(ctx context.Context, id UserId) error {
+func (s *SQLiteUserRepo) DeleteById(ctx context.Context, id models.UserId) error {
 	res, err := s.db.ExecContext(ctx, "DELETE FROM users WHERE id = ?", id)
 	if err != nil {
 		return err

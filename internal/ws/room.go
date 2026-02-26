@@ -3,15 +3,14 @@ package ws
 import (
 	"context"
 
-	"github.com/ayushgpt01/chatRoomGo/internal/room"
-	"github.com/ayushgpt01/chatRoomGo/internal/types"
+	"github.com/ayushgpt01/chatRoomGo/internal/models"
 )
 
 type Room struct {
-	id         room.RoomId
+	id         models.RoomId
 	register   chan *Client
 	unregister chan *Client
-	broadcast  chan types.ChatEvent
+	broadcast  chan models.ChatEvent
 	clients    map[*Client]bool
 
 	ctx    context.Context
