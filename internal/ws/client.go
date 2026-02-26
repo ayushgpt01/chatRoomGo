@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/ayushgpt01/chatRoomGo/internal/chat"
+	"github.com/ayushgpt01/chatRoomGo/internal/event"
 	"github.com/ayushgpt01/chatRoomGo/internal/models"
 	"github.com/gorilla/websocket"
 )
@@ -16,7 +16,7 @@ type Client struct {
 	send   chan models.ChatEvent
 }
 
-func (c *Client) readPump(hub *Hub, chatService *chat.ChatService) {
+func (c *Client) readPump(hub *Hub, chatService *event.EventService) {
 	defer func() {
 		hub.UnregisterClient(c.roomID, c)
 		c.conn.Close()
@@ -37,7 +37,7 @@ func (c *Client) readPump(hub *Hub, chatService *chat.ChatService) {
 
 		evt, err := chatService.HandleIncoming(hub.ctx, c.roomID, c.id, msg)
 		if err != nil {
-			c.send <- chat.NewErrorEvent(err)
+			c.send <- event.NewErrorEvent(err)
 			continue
 		}
 

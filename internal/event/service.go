@@ -1,4 +1,4 @@
-package chat
+package event
 
 import (
 	"context"
@@ -17,7 +17,7 @@ type eventHandler func(
 	data models.IncomingEvent,
 ) (models.ChatEvent, error)
 
-type ChatService struct {
+type EventService struct {
 	userStore       user.UserStore
 	roomStore       room.RoomStore
 	messageStore    message.MessageStore
@@ -26,13 +26,13 @@ type ChatService struct {
 	handlers map[models.IncomingEventType]eventHandler
 }
 
-func NewChatService(
+func NewEventService(
 	userStore user.UserStore,
 	roomStore room.RoomStore,
 	messageStore message.MessageStore,
 	roomMemberStore room.RoomMemberStore,
-) *ChatService {
-	srv := &ChatService{
+) *EventService {
+	srv := &EventService{
 		userStore:       userStore,
 		roomStore:       roomStore,
 		messageStore:    messageStore,
@@ -49,7 +49,7 @@ func NewChatService(
 	return srv
 }
 
-func (srv *ChatService) HandleIncoming(
+func (srv *EventService) HandleIncoming(
 	ctx context.Context,
 	roomID models.RoomId,
 	userID models.UserId,
@@ -78,7 +78,7 @@ func decodePayload(data models.IncomingEvent, v any) error {
 	return nil
 }
 
-func (srv *ChatService) ensureMember(
+func (srv *EventService) ensureMember(
 	ctx context.Context,
 	roomID models.RoomId,
 	userID models.UserId,
@@ -93,7 +93,7 @@ func (srv *ChatService) ensureMember(
 	return nil
 }
 
-func (srv *ChatService) handleJoinRoom(
+func (srv *EventService) handleJoinRoom(
 	ctx context.Context,
 	roomID models.RoomId,
 	userID models.UserId,
@@ -108,7 +108,7 @@ func (srv *ChatService) handleJoinRoom(
 	}, nil
 }
 
-func (srv *ChatService) handleLeaveRoom(
+func (srv *EventService) handleLeaveRoom(
 	ctx context.Context,
 	roomID models.RoomId,
 	userID models.UserId,
@@ -123,7 +123,7 @@ func (srv *ChatService) handleLeaveRoom(
 	}, nil
 }
 
-func (srv *ChatService) handleSendMessage(
+func (srv *EventService) handleSendMessage(
 	ctx context.Context,
 	roomID models.RoomId,
 	userID models.UserId,
@@ -157,7 +157,7 @@ func (srv *ChatService) handleSendMessage(
 	}, nil
 }
 
-func (srv *ChatService) handleEditMessage(
+func (srv *EventService) handleEditMessage(
 	ctx context.Context,
 	roomID models.RoomId,
 	userID models.UserId,
@@ -200,7 +200,7 @@ func (srv *ChatService) handleEditMessage(
 	}, nil
 }
 
-func (srv *ChatService) handleDeleteMessage(
+func (srv *EventService) handleDeleteMessage(
 	ctx context.Context,
 	roomID models.RoomId,
 	userID models.UserId,

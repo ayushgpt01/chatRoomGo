@@ -27,6 +27,7 @@ type LeaveRoomPayload struct {
 
 type CreateRoomPayload struct {
 	UserId models.UserId `json:"userId"`
+	Name   string        `json:"name"`
 }
 
 type CreateRoomResponse struct {

@@ -1,5 +1,7 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import useRoomStore from "@/stores/roomStore";
+import useToastStore from "@/stores/toastStore";
 
 export const Route = createFileRoute("/rooms/$roomId")({
 	component: RouteComponent,
@@ -14,7 +16,12 @@ export const Route = createFileRoute("/rooms/$roomId")({
 let counter = 3;
 
 function RouteComponent() {
+	const navigate = useNavigate();
 	const { roomId } = Route.useParams();
+	const leave = useRoomStore((s) => s.leave);
+	const isLeaving = useRoomStore((s) => s.isLeaving);
+
+	const showToast = useToastStore((s) => s.show);
 	const [message, setMessage] = useState("");
 	const [messages, setMessages] = useState([
 		{ id: 1, message: "Welcome to the room!" },
@@ -25,6 +32,19 @@ function RouteComponent() {
 		if (!message.trim()) return;
 		setMessages((prev) => [...prev, { id: counter++, message }]);
 		setMessage("");
+	};
+
+	const handleLeave = async () => {
+		try {
+			await leave();
+			navigate({ to: "/" });
+		} catch (err) {
+			showToast(
+				err instanceof Error ? err.message : "Could not leave the room",
+				"error",
+			);
+			console.error(err);
+		}
 	};
 
 	return (
@@ -47,8 +67,20 @@ function RouteComponent() {
 				{/* Header */}
 				<div className="navbar bg-base-100 border-b px-4">
 					<div className="flex-1 font-semibold">Room: {roomId}</div>
-					<button type="button" className="btn btn-sm btn-outline">
-						Leave
+					<button
+						type="button"
+						className="btn btn-sm btn-outline"
+						onClick={handleLeave}
+						disabled={isLeaving}
+					>
+						{isLeaving ? (
+							<>
+								<span className="loading loading-ring loading-sm"></span>
+								Leaving...
+							</>
+						) : (
+							"Leave"
+						)}
 					</button>
 				</div>
 

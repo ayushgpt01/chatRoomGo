@@ -15,7 +15,7 @@ import (
 	"github.com/rs/cors"
 
 	"github.com/ayushgpt01/chatRoomGo/internal/auth"
-	"github.com/ayushgpt01/chatRoomGo/internal/chat"
+	"github.com/ayushgpt01/chatRoomGo/internal/event"
 	"github.com/ayushgpt01/chatRoomGo/internal/message"
 	"github.com/ayushgpt01/chatRoomGo/internal/room"
 	"github.com/ayushgpt01/chatRoomGo/internal/router"
@@ -80,10 +80,10 @@ func main() {
 	go hub.Cleanup()
 
 	authService := auth.NewAuthService(userStore, authStore)
-	chatService := chat.NewChatService(userStore, roomStore, messageStore, roomMemberStore)
+	eventService := event.NewEventService(userStore, roomStore, messageStore, roomMemberStore)
 	roomService := room.NewRoomService(roomMemberStore, roomStore, authService, hub)
-	wsHandler := ws.NewWSHandler(hub, chatService)
-	handler := router.HandleRoutes(wsHandler, chatService, authService, roomService)
+	wsHandler := ws.NewWSHandler(hub, eventService)
+	handler := router.HandleRoutes(wsHandler, authService, roomService)
 
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:3000"},

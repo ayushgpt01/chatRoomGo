@@ -9,13 +9,18 @@ export const Route = createFileRoute("/")({ component: App });
 function App() {
 	const navigate = useNavigate();
 	const [roomId, setRoomId] = useState("");
+	const [roomName, setRoomName] = useState("");
 	const [error, setError] = useState<string | null>(null);
+	const [roomError, setRoomError] = useState<string | null>(null);
 
 	const isLoggedIn = useAuthStore((s) => s.isAuthenticated);
 	const logout = useAuthStore((s) => s.logout);
 	const setAuth = useAuthStore((s) => s.setAuth);
 
 	const join = useRoomStore((s) => s.join);
+	const create = useRoomStore((s) => s.create);
+	const isCreating = useRoomStore((s) => s.isCreating);
+	const isJoining = useRoomStore((s) => s.isJoining);
 
 	const showToast = useToastStore((s) => s.show);
 
@@ -34,8 +39,25 @@ function App() {
 				setAuth(res.login);
 			}
 
-			showToast("Logged in successfully", "success");
 			navigate({ to: "/rooms/$roomId", params: { roomId } });
+		} catch (err) {
+			showToast(
+				err instanceof Error ? err.message : "Could not join the room",
+				"error",
+			);
+			console.error(err);
+		}
+	};
+
+	const createRoom = async () => {
+		if (!roomName.trim()) {
+			setRoomError("Please enter a room name");
+			return;
+		}
+
+		try {
+			const res = await create(roomName.trim());
+			navigate({ to: "/rooms/$roomId", params: { roomId: `${res}` } });
 		} catch (err) {
 			showToast(
 				err instanceof Error ? err.message : "Could not join the room",
@@ -72,9 +94,54 @@ function App() {
 						type="button"
 						onClick={joinRoom}
 						className="btn btn-primary mt-4"
+						disabled={isJoining}
 					>
-						Join Room
+						{isJoining ? (
+							<>
+								<span className="loading loading-ring loading-sm"></span>
+								Joining room...
+							</>
+						) : (
+							"Join Room"
+						)}
 					</button>
+
+					{isLoggedIn && (
+						<>
+							<div className="form-control mt-4">
+								<input
+									type="text"
+									placeholder="Enter Room Name"
+									className={`input input-bordered w-full ${
+										roomError ? "input-error" : ""
+									}`}
+									value={roomName}
+									onChange={(e) => setRoomName(e.target.value)}
+								/>
+								{roomError && (
+									<p className="text-error text-sm mt-1">
+										{roomError || "Please enter a valid room name"}
+									</p>
+								)}
+							</div>
+
+							<button
+								type="button"
+								onClick={createRoom}
+								className="btn btn-primary mt-4"
+								disabled={isCreating}
+							>
+								{isCreating ? (
+									<>
+										<span className="loading loading-ring loading-sm"></span>
+										Creating room...
+									</>
+								) : (
+									"Create Room"
+								)}
+							</button>
+						</>
+					)}
 
 					<div className="divider">or</div>
 					{!isLoggedIn ? (

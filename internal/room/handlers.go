@@ -1,8 +1,7 @@
 package room
 
 import (
-	"encoding/json"
-	"log"
+	"context"
 	"net/http"
 
 	"github.com/ayushgpt01/chatRoomGo/internal/auth"
@@ -10,15 +9,22 @@ import (
 	"github.com/ayushgpt01/chatRoomGo/utils"
 )
 
-func HandleJoinRoom(srv *RoomService) http.Handler {
-	type Payload struct {
-		RoomId models.RoomId
-	}
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var temp Payload
+type Request struct {
+	RoomId models.RoomId `json:"roomId"`
+}
 
-		if err := json.NewDecoder(r.Body).Decode(&temp); err != nil {
-			http.Error(w, "Invalid request", http.StatusBadRequest)
+func (p Request) Valid(ctx context.Context) map[string]string {
+	problems := make(map[string]string)
+	if p.RoomId == 0 {
+		problems["roomId"] = "Room Id is required"
+	}
+	return problems
+}
+
+func HandleJoinRoom(srv *RoomService) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		temp, ok := utils.HandleDecode[Request](w, r)
+		if !ok {
 			return
 		}
 
@@ -30,12 +36,7 @@ func HandleJoinRoom(srv *RoomService) http.Handler {
 		})
 
 		if err != nil {
-			log.Printf("POST /room/join - %v\n", err)
-			if err.Error() == "invalid credentials" {
-				http.Error(w, err.Error(), http.StatusUnauthorized)
-				return
-			}
-			http.Error(w, "Server error", http.StatusInternalServerError)
+			utils.HandleServiceError(w, "POST /room/join", err)
 			return
 		}
 
@@ -47,14 +48,9 @@ func HandleJoinRoom(srv *RoomService) http.Handler {
 }
 
 func HandleLeaveRoom(srv *RoomService) http.Handler {
-	type Payload struct {
-		RoomId models.RoomId
-	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var temp Payload
-
-		if err := json.NewDecoder(r.Body).Decode(&temp); err != nil {
-			http.Error(w, "Invalid request", http.StatusBadRequest)
+		temp, ok := utils.HandleDecode[Request](w, r)
+		if !ok {
 			return
 		}
 
@@ -70,15 +66,52 @@ func HandleLeaveRoom(srv *RoomService) http.Handler {
 		})
 
 		if err != nil {
-			log.Printf("POST /room/leave - %v\n", err)
-			if err.Error() == "invalid credentials" {
-				http.Error(w, err.Error(), http.StatusUnauthorized)
-				return
-			}
-			http.Error(w, "Server error", http.StatusInternalServerError)
+			utils.HandleServiceError(w, "POST /room/leave", err)
 			return
 		}
 
 		w.WriteHeader(http.StatusNoContent)
+	})
+}
+
+type CreateRoomRequest struct {
+	Name string `json:"name"`
+}
+
+func (p CreateRoomRequest) Valid(ctx context.Context) map[string]string {
+	problems := make(map[string]string)
+	if len(p.Name) == 0 {
+		problems["name"] = "room name is required"
+	}
+	return problems
+}
+
+func HandleCreateRoom(srv *RoomService) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		temp, ok := utils.HandleDecode[CreateRoomRequest](w, r)
+		if !ok {
+			return
+		}
+
+		currentUserId, ok := r.Context().Value(auth.UserIDKey).(models.UserId)
+		if !ok {
+			http.Error(w, "Server error", http.StatusInternalServerError)
+			return
+		}
+
+		res, err := srv.HandleCreateRoom(r.Context(), CreateRoomPayload{
+			UserId: currentUserId,
+			Name:   temp.Name,
+		})
+
+		if err != nil {
+			utils.HandleServiceError(w, "POST /room/create", err)
+			return
+		}
+
+		err = utils.Encode(w, r, http.StatusCreated, res)
+		if err != nil {
+			http.Error(w, "Server error", http.StatusInternalServerError)
+		}
 	})
 }

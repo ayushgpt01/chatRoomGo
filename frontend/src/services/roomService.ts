@@ -8,6 +8,10 @@ type JoinRoomResponse = {
 	login?: LoginResponse;
 };
 
+type CreateRoomResponse = {
+	room: Room;
+};
+
 export const roomService = {
 	join: async (roomId: number) => {
 		const response = await axiosClient.post<JoinRoomResponse>("/room/join", {
@@ -28,5 +32,16 @@ export const roomService = {
 
 	leave: async (roomId: number) => {
 		await axiosClient.post("/room/leave", { roomId });
+	},
+
+	create: async (roomName: string) => {
+		const response = await axiosClient.post<CreateRoomResponse>(
+			"/room/create",
+			{ name: roomName },
+		);
+
+		const data = response.data;
+		RoomSchema.parse(data.room);
+		return data;
 	},
 };

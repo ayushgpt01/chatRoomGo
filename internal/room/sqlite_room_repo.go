@@ -10,7 +10,7 @@ import (
 )
 
 type RoomStore interface {
-	Create(ctx context.Context, name string) (models.RoomId, error)
+	Create(ctx context.Context, name string) (*models.Room, error)
 	GetById(ctx context.Context, roomId models.RoomId) (*models.Room, error)
 	UpdateName(ctx context.Context, roomId models.RoomId, name string) error
 	Delete(ctx context.Context, roomId models.RoomId) error
@@ -55,14 +55,19 @@ func (s *SQLiteRoomRepo) init(ctx context.Context) error {
 	return nil
 }
 
-func (s *SQLiteRoomRepo) Create(ctx context.Context, name string) (models.RoomId, error) {
+func (s *SQLiteRoomRepo) Create(ctx context.Context, name string) (*models.Room, error) {
 	res, err := s.db.ExecContext(ctx, "INSERT INTO rooms(name) VALUES(?)", name)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
 	roomId, err := res.LastInsertId()
-	return roomId, err
+	if err != nil {
+		return nil, err
+	}
+
+	room, err := s.GetById(ctx, roomId)
+	return room, err
 }
 
 func (s *SQLiteRoomRepo) GetById(ctx context.Context, roomId models.RoomId) (*models.Room, error) {

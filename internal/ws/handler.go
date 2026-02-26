@@ -5,17 +5,17 @@ import (
 	"net/http"
 
 	"github.com/ayushgpt01/chatRoomGo/internal/auth"
-	"github.com/ayushgpt01/chatRoomGo/internal/chat"
+	"github.com/ayushgpt01/chatRoomGo/internal/event"
 	"github.com/ayushgpt01/chatRoomGo/internal/models"
 	"github.com/gorilla/websocket"
 )
 
 type Wshandler struct {
 	hub         *Hub
-	chatService *chat.ChatService
+	chatService *event.EventService
 }
 
-func NewWSHandler(hub *Hub, chatService *chat.ChatService) *Wshandler {
+func NewWSHandler(hub *Hub, chatService *event.EventService) *Wshandler {
 	return &Wshandler{
 		hub,
 		chatService,

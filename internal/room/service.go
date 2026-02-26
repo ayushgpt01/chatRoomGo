@@ -75,5 +75,19 @@ func (srv *RoomService) HandleLeaveRoom(ctx context.Context, payload LeaveRoomPa
 }
 
 func (srv *RoomService) HandleCreateRoom(ctx context.Context, payload CreateRoomPayload) (CreateRoomResponse, error) {
-	return CreateRoomResponse{}, nil
+	room, err := srv.roomStore.Create(ctx, payload.Name)
+	if err != nil {
+		return CreateRoomResponse{}, err
+	}
+
+	if err = srv.roomMemberStore.JoinRoom(ctx, room.Id, payload.UserId); err != nil {
+		return CreateRoomResponse{}, err
+	}
+
+	return CreateRoomResponse{
+		Room: ResponseRoom{
+			Id:   room.Id,
+			Name: room.Name,
+		},
+	}, nil
 }
