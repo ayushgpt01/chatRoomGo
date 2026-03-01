@@ -17,7 +17,7 @@ const messageService = {
 		const { cursor, limit, roomId } = GetMessageSchema.parse(payload);
 
 		const response = await axiosClient.get<GetMessagesResponse>(
-			`/rooms/${roomId}/messages`,
+			`/room/${roomId}/messages`,
 			{ params: { cursor, limit } },
 		);
 

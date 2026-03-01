@@ -3,9 +3,10 @@ package models
 import "errors"
 
 var (
-	ErrNotFound      = errors.New("resource not found")
-	ErrUnauthorized  = errors.New("unauthorized")
-	ErrInvalidInput  = errors.New("invalid input")
-	ErrUserNotInRoom = errors.New("user is not a member of this room")
-	ErrAlreadyInRoom = errors.New("user is already in this room")
+	ErrNotFound     = errors.New("not found")
+	ErrUnauthorized = errors.New("unauthorized")
+	ErrForbidden    = errors.New("forbidden")
+	ErrInvalidInput = errors.New("invalid input")
+	ErrConflict     = errors.New("conflict")
+	ErrInternal     = errors.New("internal error")
 )

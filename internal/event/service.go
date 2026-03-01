@@ -135,6 +135,7 @@ func (srv *EventService) handleSendMessage(
 
 	var payload struct {
 		Content string `json:"content"`
+		Nonce   string `json:"nonce"`
 	}
 
 	if err := decodePayload(data, &payload); err != nil {
@@ -146,10 +147,12 @@ func (srv *EventService) handleSendMessage(
 		return nil, err
 	}
 
-	msg, err := srv.messageStore.GetById(ctx, msgID)
+	msg, err := srv.messageStore.GetResponseById(ctx, msgID)
 	if err != nil {
 		return nil, err
 	}
+
+	msg.Nonce = &payload.Nonce
 
 	return &models.BaseEvent{
 		EventType: models.EventMessageCreated,
@@ -189,7 +192,7 @@ func (srv *EventService) handleEditMessage(
 		return nil, err
 	}
 
-	updatedMsg, err := srv.messageStore.GetById(ctx, payload.MessageID)
+	updatedMsg, err := srv.messageStore.GetResponseById(ctx, payload.MessageID)
 	if err != nil {
 		return nil, err
 	}

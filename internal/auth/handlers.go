@@ -2,7 +2,6 @@ package auth
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 
 	"github.com/ayushgpt01/chatRoomGo/utils"
@@ -19,12 +18,7 @@ func HandleLogin(srv *AuthService) http.Handler {
 
 		res, err := srv.HandleLogin(r.Context(), payload)
 		if err != nil {
-			log.Printf("POST /auth/login - %v\n", err)
-			if err.Error() == "invalid credentials" {
-				http.Error(w, err.Error(), http.StatusUnauthorized)
-				return
-			}
-			http.Error(w, "Server error", http.StatusInternalServerError)
+			utils.HandleServiceError(w, "POST /auth/login", err)
 			return
 		}
 
@@ -45,10 +39,8 @@ func HandleSignup(srv *AuthService) http.Handler {
 		}
 
 		res, err := srv.HandleSignup(r.Context(), payload)
-		// TODO - Add special error types to detect special auth error like token expired etc..
 		if err != nil {
-			log.Printf("POST /auth/signup - %v\n", err)
-			http.Error(w, "Server error", http.StatusInternalServerError)
+			utils.HandleServiceError(w, "POST /auth/signup", err)
 			return
 		}
 
@@ -71,10 +63,8 @@ func HandleRefresh(srv *AuthService) http.Handler {
 		}
 
 		token, err := srv.HandleRefresh(r.Context(), payload.RefreshToken)
-		// TODO - Add special error types to detect special auth error like token expired etc..
 		if err != nil {
-			log.Printf("POST /auth/refresh - %v\n", err)
-			http.Error(w, "Server error", http.StatusInternalServerError)
+			utils.HandleServiceError(w, "POST /auth/refresh", err)
 			return
 		}
 
@@ -99,10 +89,8 @@ func HandleMe(srv *AuthService) http.Handler {
 		accessToken := authHeader[7:]
 
 		res, err := srv.GetCurrentUser(r.Context(), accessToken)
-		// TODO - Add special error types to detect special auth error like token expired etc..
 		if err != nil {
-			log.Printf("GET /auth/me - %v\n", err)
-			http.Error(w, "Server error", http.StatusInternalServerError)
+			utils.HandleServiceError(w, "POST /auth/me", err)
 			return
 		}
 
@@ -125,10 +113,8 @@ func HandleLogout(srv *AuthService) http.Handler {
 		}
 
 		err := srv.HandleLogout(r.Context(), payload.RefreshToken)
-		// TODO - Add special error types to detect special auth error like token expired etc..
 		if err != nil {
-			log.Printf("POST /auth/logout - %v\n", err)
-			http.Error(w, "Server error", http.StatusInternalServerError)
+			utils.HandleServiceError(w, "POST /auth/logout", err)
 			return
 		}
 

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/ayushgpt01/chatRoomGo/internal/auth"
+	"github.com/ayushgpt01/chatRoomGo/internal/message"
 	"github.com/ayushgpt01/chatRoomGo/internal/room"
 	"github.com/ayushgpt01/chatRoomGo/internal/ws"
 )
@@ -31,12 +32,12 @@ func recoverMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func HandleRoutes(wsHandler *ws.Wshandler, authService *auth.AuthService, roomService *room.RoomService) http.Handler {
+func HandleRoutes(wsHandler *ws.Wshandler, authService *auth.AuthService, roomService *room.RoomService, messageService *message.MessageService) http.Handler {
 	log.Printf("Setting up routes...")
 
 	mux := http.NewServeMux()
 
-	handleAPIRoutes(mux, authService, roomService)
+	handleAPIRoutes(mux, authService, roomService, messageService)
 	handleViews(mux)
 	mux.Handle("/ws", wsHandler)
 

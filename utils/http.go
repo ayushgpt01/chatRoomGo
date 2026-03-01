@@ -65,21 +65,23 @@ func HandleDecode[T Validator](w http.ResponseWriter, r *http.Request) (T, bool)
 func HandleServiceError(w http.ResponseWriter, path string, err error) {
 	log.Printf("%s - %v\n", path, err)
 
-	// Switch on error types or messages
 	switch {
+	case errors.Is(err, models.ErrInvalidInput):
+		http.Error(w, "Invalid input", http.StatusBadRequest)
+
 	case errors.Is(err, models.ErrUnauthorized):
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+
+	case errors.Is(err, models.ErrForbidden):
+		http.Error(w, "Forbidden", http.StatusForbidden)
 
 	case errors.Is(err, models.ErrNotFound):
 		http.Error(w, "Resource not found", http.StatusNotFound)
 
-	case errors.Is(err, models.ErrUserNotInRoom):
-		http.Error(w, err.Error(), http.StatusForbidden)
-
-	case errors.Is(err, models.ErrAlreadyInRoom):
-		http.Error(w, err.Error(), http.StatusConflict)
+	case errors.Is(err, models.ErrConflict):
+		http.Error(w, "Conflict", http.StatusConflict)
 
 	default:
-		http.Error(w, "Internal Server error", http.StatusInternalServerError)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
 }

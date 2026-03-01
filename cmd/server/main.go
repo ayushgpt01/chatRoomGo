@@ -82,15 +82,16 @@ func main() {
 	authService := auth.NewAuthService(userStore, authStore)
 	eventService := event.NewEventService(userStore, roomStore, messageStore, roomMemberStore)
 	roomService := room.NewRoomService(roomMemberStore, roomStore, authService, hub)
+	messageService := message.NewMessageService(messageStore, roomMemberStore)
 	wsHandler := ws.NewWSHandler(hub, eventService)
-	handler := router.HandleRoutes(wsHandler, authService, roomService)
+	handler := router.HandleRoutes(wsHandler, authService, roomService, messageService)
 
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:3000"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Authorization", "Content-Type"},
 		AllowCredentials: true,
-		Debug:            true,
+		Debug:            false,
 	})
 
 	handler = c.Handler(handler)

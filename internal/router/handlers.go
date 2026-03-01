@@ -4,10 +4,11 @@ import (
 	"net/http"
 
 	"github.com/ayushgpt01/chatRoomGo/internal/auth"
+	"github.com/ayushgpt01/chatRoomGo/internal/message"
 	"github.com/ayushgpt01/chatRoomGo/internal/room"
 )
 
-func handleAPIRoutes(mux *http.ServeMux, authService *auth.AuthService, roomService *room.RoomService) {
+func handleAPIRoutes(mux *http.ServeMux, authService *auth.AuthService, roomService *room.RoomService, messageService *message.MessageService) {
 	apiMux := http.NewServeMux()
 
 	// Public Routes
@@ -26,6 +27,7 @@ func handleAPIRoutes(mux *http.ServeMux, authService *auth.AuthService, roomServ
 	protectedMux.Handle("POST /room/leave", room.HandleLeaveRoom(roomService))
 	protectedMux.Handle("GET /room/getAll", room.HandleGetRooms(roomService))
 	protectedMux.Handle("POST /room/create", room.HandleCreateRoom(roomService))
+	protectedMux.Handle("GET /room/{roomId}/messages", message.HandleGetMessages(messageService))
 
 	apiMux.Handle("/", authService.Middleware(protectedMux))
 
