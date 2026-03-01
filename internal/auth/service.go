@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"time"
 
@@ -45,7 +46,7 @@ func (srv *AuthService) getByAccessToken(tokenString string) (models.UserId, err
 	})
 
 	if err != nil || !token.Valid {
-		return 0, fmt.Errorf("invalid token")
+		return 0, models.ErrUnauthorized
 	}
 
 	if claims, ok := token.Claims.(jwt.MapClaims); ok {
@@ -54,13 +55,15 @@ func (srv *AuthService) getByAccessToken(tokenString string) (models.UserId, err
 		}
 	}
 
-	return 0, fmt.Errorf("invalid claims")
+	return 0, models.ErrUnauthorized
 }
 
-func (srv *AuthService) generateRefreshToken() string {
+func (srv *AuthService) generateRefreshToken() (string, error) {
 	b := make([]byte, 32)
-	rand.Read(b)
-	return hex.EncodeToString(b)
+	if _, err := rand.Read(b); err != nil {
+		return "", fmt.Errorf("generate refresh token: %w", err)
+	}
+	return hex.EncodeToString(b), nil
 }
 
 func (srv *AuthService) HandleGuestSignup(ctx context.Context) (LoginResponse, error) {
@@ -74,25 +77,29 @@ func (srv *AuthService) HandleGuestSignup(ctx context.Context) (LoginResponse, e
 
 	userId, err := srv.userStore.Create(ctx, payload.Username, payload.Name, payload.Password, models.AccountRoleGuest)
 	if err != nil {
-		return LoginResponse{}, err
+		return LoginResponse{}, fmt.Errorf("guest signup create user: %w", err)
 	}
 
 	user, err := srv.userStore.GetById(ctx, userId)
 	if err != nil {
-		return LoginResponse{}, err
+		return LoginResponse{}, fmt.Errorf("guest signup get user by id=%d: %w", userId, err)
 	}
 
 	token, err := srv.generateAccessToken(userId)
 	if err != nil {
-		return LoginResponse{}, err
+		return LoginResponse{}, fmt.Errorf("guest signup generate access token user_id=%d: %w", userId, err)
 	}
 
-	refreshToken := srv.generateRefreshToken()
+	refreshToken, err := srv.generateRefreshToken()
+	if err != nil {
+		return LoginResponse{}, fmt.Errorf("guest signup generate refresh token: %w", err)
+	}
+
 	expiry := time.Now().Add(time.Hour * 24 * 7)
 
 	err = srv.authStore.SaveRefreshToken(ctx, userId, refreshToken, expiry)
 	if err != nil {
-		return LoginResponse{}, err
+		return LoginResponse{}, fmt.Errorf("guest signup save refresh token user_id=%d: %w", userId, err)
 	}
 
 	return LoginResponse{
@@ -110,30 +117,34 @@ func (srv *AuthService) HandleGuestSignup(ctx context.Context) (LoginResponse, e
 func (srv *AuthService) HandleSignup(ctx context.Context, payload SignupPayload) (LoginResponse, error) {
 	passwordHash, err := utils.HashPassword(payload.Password)
 	if err != nil {
-		return LoginResponse{}, err
+		return LoginResponse{}, fmt.Errorf("signup hash password: %w", err)
 	}
 
 	userId, err := srv.userStore.Create(ctx, payload.Username, payload.Name, passwordHash, models.AccountRoleUser)
 	if err != nil {
-		return LoginResponse{}, err
+		return LoginResponse{}, fmt.Errorf("signup create user: %w", err)
 	}
 
 	user, err := srv.userStore.GetById(ctx, userId)
 	if err != nil {
-		return LoginResponse{}, err
+		return LoginResponse{}, fmt.Errorf("signup get user by id=%d: %w", userId, err)
 	}
 
 	token, err := srv.generateAccessToken(userId)
 	if err != nil {
-		return LoginResponse{}, err
+		return LoginResponse{}, fmt.Errorf("signup generate access token user_id=%d: %w", userId, err)
 	}
 
-	refreshToken := srv.generateRefreshToken()
+	refreshToken, err := srv.generateRefreshToken()
+	if err != nil {
+		return LoginResponse{}, fmt.Errorf("signup generate refresh token: %w", err)
+	}
+
 	expiry := time.Now().Add(time.Hour * 24 * 7)
 
 	err = srv.authStore.SaveRefreshToken(ctx, userId, refreshToken, expiry)
 	if err != nil {
-		return LoginResponse{}, err
+		return LoginResponse{}, fmt.Errorf("signup save refresh token user_id=%d: %w", userId, err)
 	}
 
 	return LoginResponse{
@@ -151,28 +162,36 @@ func (srv *AuthService) HandleSignup(ctx context.Context, payload SignupPayload)
 func (srv *AuthService) HandleLogin(ctx context.Context, payload LoginPayload) (LoginResponse, error) {
 	u, err := srv.userStore.GetByUsername(ctx, payload.Username)
 	if err != nil {
-		return LoginResponse{}, fmt.Errorf("no user like this")
+		if errors.Is(err, models.ErrNotFound) {
+			return LoginResponse{}, models.ErrUnauthorized
+		}
+
+		return LoginResponse{}, fmt.Errorf("login get user username=%s: %w", payload.Username, err)
 	}
 
 	if u.AccountRole == models.AccountRoleGuest {
-		return LoginResponse{}, fmt.Errorf("invalid credentials")
+		return LoginResponse{}, models.ErrUnauthorized
 	}
 
 	if valid := utils.CheckPasswordHash(payload.Password, u.Password); !valid {
-		return LoginResponse{}, fmt.Errorf("invalid password")
+		return LoginResponse{}, models.ErrUnauthorized
 	}
 
 	token, err := srv.generateAccessToken(u.Id)
 	if err != nil {
-		return LoginResponse{}, err
+		return LoginResponse{}, fmt.Errorf("login generate access token user_id=%d: %w", u.Id, err)
 	}
 
-	refreshToken := srv.generateRefreshToken()
+	refreshToken, err := srv.generateRefreshToken()
+	if err != nil {
+		return LoginResponse{}, fmt.Errorf("login generate refresh token: %w", err)
+	}
+
 	expiry := time.Now().Add(time.Hour * 24 * 7)
 
 	err = srv.authStore.SaveRefreshToken(ctx, u.Id, refreshToken, expiry)
 	if err != nil {
-		return LoginResponse{}, err
+		return LoginResponse{}, fmt.Errorf("login save refresh token user id=%d: %w", u.Id, err)
 	}
 
 	return LoginResponse{
@@ -190,23 +209,38 @@ func (srv *AuthService) HandleLogin(ctx context.Context, payload LoginPayload) (
 func (srv *AuthService) HandleRefresh(ctx context.Context, providedToken string) (string, error) {
 	userId, err := srv.authStore.ValidateRefreshToken(ctx, providedToken)
 	if err != nil {
-		return "", fmt.Errorf("session expired, please login again")
+		if errors.Is(err, models.ErrNotFound) {
+			return "", models.ErrUnauthorized
+		}
+
+		return "", fmt.Errorf("handle refresh validate token: %w", err)
 	}
 
-	return srv.generateAccessToken(userId)
+	token, err := srv.generateAccessToken(userId)
+	if err != nil {
+		return "", fmt.Errorf("handle refresh generate access token user_id=%d: %w", userId, err)
+	}
+
+	return token, nil
 }
 
 func (srv *AuthService) GetCurrentUser(ctx context.Context, accessToken string) (ResponseUser, error) {
-	// Get user id from accessToken
 	userId, err := srv.getByAccessToken(accessToken)
 	if err != nil {
-		return ResponseUser{}, fmt.Errorf("invalid token")
+		if errors.Is(err, models.ErrUnauthorized) {
+			return ResponseUser{}, models.ErrUnauthorized
+		}
+
+		return ResponseUser{}, fmt.Errorf("getting user id by access token: %w", err)
 	}
 
-	// If valid get user and return it.
 	user, err := srv.userStore.GetById(ctx, userId)
 	if err != nil {
-		return ResponseUser{}, fmt.Errorf("invalid token")
+		if errors.Is(err, models.ErrNotFound) {
+			return ResponseUser{}, models.ErrUnauthorized
+		}
+
+		return ResponseUser{}, fmt.Errorf("getting user by id=%d: %w", userId, err)
 	}
 
 	return ResponseUser{
@@ -218,9 +252,19 @@ func (srv *AuthService) GetCurrentUser(ctx context.Context, accessToken string) 
 }
 
 func (srv *AuthService) HandleLogout(ctx context.Context, refreshToken string) error {
-	return srv.authStore.DeleteRefreshToken(ctx, refreshToken)
+	if err := srv.authStore.DeleteRefreshToken(ctx, refreshToken); err != nil {
+		if errors.Is(err, models.ErrNotFound) {
+			return nil
+		}
+
+		return fmt.Errorf("logout delete refresh token: %w", err)
+	}
+	return nil
 }
 
 func (srv *AuthService) HandleCleanup(ctx context.Context) error {
-	return srv.authStore.CleanupExpiredTokens(ctx)
+	if err := srv.authStore.CleanupExpiredTokens(ctx); err != nil {
+		return fmt.Errorf("cleanup expired tokens: %w", err)
+	}
+	return nil
 }

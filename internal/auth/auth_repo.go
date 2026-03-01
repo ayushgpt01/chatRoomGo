@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -25,7 +26,7 @@ func NewSQLiteAuthRepo(ctx context.Context, db *sql.DB) (*SQLiteAuthRepo, error)
 	store := SQLiteAuthRepo{db}
 
 	if err := store.init(ctx); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("initializing refresh_tokens table: %w", err)
 	}
 
 	return &store, nil
@@ -41,7 +42,7 @@ func (s *SQLiteAuthRepo) init(ctx context.Context) error {
 	)`
 
 	if _, err := s.db.ExecContext(ctx, createTableSQL); err != nil {
-		return err
+		return fmt.Errorf("creating refresh_tokens table: %w", err)
 	}
 
 	return nil
@@ -50,7 +51,7 @@ func (s *SQLiteAuthRepo) init(ctx context.Context) error {
 func (s *SQLiteAuthRepo) SaveRefreshToken(ctx context.Context, userId models.UserId, token string, expiresAt time.Time) error {
 	_, err := s.db.ExecContext(ctx, "INSERT INTO refresh_tokens(user_id, token, expires_at) VALUES(?, ?, ?)", userId, token, expiresAt)
 	if err != nil {
-		return fmt.Errorf("SaveRefreshToken %d: %v", userId, err)
+		return fmt.Errorf("saving refresh token %d: %w", userId, err)
 	}
 
 	return nil
@@ -62,7 +63,10 @@ func (s *SQLiteAuthRepo) ValidateRefreshToken(ctx context.Context, token string)
 
 	err := row.Scan(&userId)
 	if err != nil {
-		return 0, err
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, fmt.Errorf("getting refresh token %s: %w", token, models.ErrNotFound)
+		}
+		return 0, fmt.Errorf("scanning refresh token %s: %w", token, err)
 	}
 
 	return userId, nil
@@ -71,7 +75,7 @@ func (s *SQLiteAuthRepo) ValidateRefreshToken(ctx context.Context, token string)
 func (s *SQLiteAuthRepo) DeleteRefreshToken(ctx context.Context, token string) error {
 	_, err := s.db.ExecContext(ctx, "DELETE FROM refresh_tokens WHERE token = ?", token)
 	if err != nil {
-		return fmt.Errorf("DeleteRefreshToken %s: %v", token, err)
+		return fmt.Errorf("deleting refresh token %s: %w", token, err)
 	}
 
 	return nil
@@ -79,5 +83,5 @@ func (s *SQLiteAuthRepo) DeleteRefreshToken(ctx context.Context, token string) e
 
 func (s *SQLiteAuthRepo) CleanupExpiredTokens(ctx context.Context) error {
 	_, err := s.db.ExecContext(ctx, "DELETE FROM refresh_tokens WHERE expires_at < CURRENT_TIMESTAMP")
-	return err
+	return fmt.Errorf("cleaning up expired tokens: %w", err)
 }

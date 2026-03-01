@@ -3,6 +3,7 @@ package room
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/ayushgpt01/chatRoomGo/internal/models"
@@ -26,7 +27,7 @@ func NewSQLiteRoomMemberRepo(ctx context.Context, db *sql.DB) (*SQLiteRoomMember
 	store := SQLiteRoomMemberRepo{db}
 
 	if err := store.init(ctx); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("init room_member repo: %w", err)
 	}
 
 	return &store, nil
@@ -45,11 +46,11 @@ func (s *SQLiteRoomMemberRepo) init(ctx context.Context) error {
 	createUserIdIndexSQL := `CREATE INDEX IF NOT EXISTS idx_room_members_users_id ON room_members(user_id)`
 
 	if _, err := s.db.ExecContext(ctx, createTableSQL); err != nil {
-		return err
+		return fmt.Errorf("create room_members table: %w", err)
 	}
 
 	if _, err := s.db.ExecContext(ctx, createUserIdIndexSQL); err != nil {
-		return err
+		return fmt.Errorf("create room_members user_id index: %w", err)
 	}
 
 	return nil
@@ -57,22 +58,25 @@ func (s *SQLiteRoomMemberRepo) init(ctx context.Context) error {
 
 func (s *SQLiteRoomMemberRepo) JoinRoom(ctx context.Context, roomId models.RoomId, userId models.UserId) error {
 	_, err := s.db.ExecContext(ctx, "INSERT OR IGNORE INTO room_members(room_id, user_id) VALUES(?, ?)", roomId, userId)
-	return err
+	if err != nil {
+		return fmt.Errorf("join room room_id=%d user_id=%d: %w", roomId, userId, err)
+	}
+	return nil
 }
 
 func (s *SQLiteRoomMemberRepo) LeaveRoom(ctx context.Context, roomId models.RoomId, userId models.UserId) error {
 	res, err := s.db.ExecContext(ctx, "DELETE FROM room_members WHERE room_id = ? AND user_id = ?", roomId, userId)
 	if err != nil {
-		return err
+		return fmt.Errorf("leave room room_id=%d user_id=%d: %w", roomId, userId, err)
 	}
 
 	count, err := res.RowsAffected()
 	if err != nil {
-		return err
+		return fmt.Errorf("leave room rows affected room_id=%d user_id=%d: %w", roomId, userId, err)
 	}
 
 	if count == 0 {
-		return fmt.Errorf("User %d has not joined the room: %d", userId, roomId)
+		return fmt.Errorf("leave room room_id=%d user_id=%d: %w", roomId, userId, models.ErrNotFound)
 	}
 
 	return nil
@@ -84,8 +88,11 @@ func (s *SQLiteRoomMemberRepo) Exists(ctx context.Context, roomId models.RoomId,
 	var exists bool
 
 	err := s.db.QueryRowContext(ctx, query, roomId, userId).Scan(&exists)
-	if err != nil && err != sql.ErrNoRows {
-		return false, err
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, nil
+		}
+		return false, fmt.Errorf("check room member exists room_id=%d user_id=%d: %w", roomId, userId, err)
 	}
 
 	return exists, nil
@@ -96,8 +103,11 @@ func (s *SQLiteRoomMemberRepo) CountByRoomId(ctx context.Context, roomId models.
 	var count int
 
 	err := s.db.QueryRowContext(ctx, query, roomId).Scan(&count)
-	if err != nil && err != sql.ErrNoRows {
-		return 0, err
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, nil
+		}
+		return 0, fmt.Errorf("count room members room_id=%d: %w", roomId, err)
 	}
 
 	return count, nil
@@ -108,7 +118,7 @@ func (s *SQLiteRoomMemberRepo) GetByRoomId(ctx context.Context, roomId models.Ro
 
 	rows, err := s.db.QueryContext(ctx, query, roomId)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get room members room_id=%d: %w", roomId, err)
 	}
 	defer rows.Close()
 
@@ -116,13 +126,13 @@ func (s *SQLiteRoomMemberRepo) GetByRoomId(ctx context.Context, roomId models.Ro
 	for rows.Next() {
 		var id models.UserId
 		if err := rows.Scan(&id); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("scan room member room_id=%d: %w", roomId, err)
 		}
 		ids = append(ids, id)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("iterate room members room_id=%d: %w", roomId, err)
 	}
 
 	return ids, nil
@@ -146,7 +156,7 @@ func (s *SQLiteRoomMemberRepo) GetRoomsByUserId(ctx context.Context, userId mode
 
 	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("querying rooms for user %d: %w", userId, err)
 	}
 	defer rows.Close()
 
@@ -155,13 +165,13 @@ func (s *SQLiteRoomMemberRepo) GetRoomsByUserId(ctx context.Context, userId mode
 		room := &models.Room{}
 		err := rows.Scan(&room.Id, &room.Name, &room.CreatedAt, &room.UpdatedAt)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("scanning rooms for user %d: %w", userId, err)
 		}
 		rooms = append(rooms, room)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("iterating rooms for user %d: %w", userId, err)
 	}
 
 	var nextCursor *string

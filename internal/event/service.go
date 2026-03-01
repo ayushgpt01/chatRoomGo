@@ -3,6 +3,9 @@ package event
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
+	"strings"
 
 	"github.com/ayushgpt01/chatRoomGo/internal/message"
 	"github.com/ayushgpt01/chatRoomGo/internal/models"
@@ -56,11 +59,17 @@ func (srv *EventService) HandleIncoming(
 	data models.IncomingEvent,
 ) (models.ChatEvent, error) {
 	if _, err := srv.roomStore.GetById(ctx, roomID); err != nil {
-		return nil, err
+		if errors.Is(err, models.ErrNotFound) {
+			return nil, ErrForbidden
+		}
+		return nil, fmt.Errorf("ws get room id=%d: %w", roomID, err)
 	}
 
 	if _, err := srv.userStore.GetById(ctx, userID); err != nil {
-		return nil, err
+		if errors.Is(err, models.ErrNotFound) {
+			return nil, ErrForbidden
+		}
+		return nil, fmt.Errorf("ws get user id=%d: %w", userID, err)
 	}
 
 	handler, ok := srv.handlers[models.IncomingEventType(data.Type)]
@@ -85,7 +94,7 @@ func (srv *EventService) ensureMember(
 ) error {
 	exists, err := srv.roomMemberStore.Exists(ctx, roomID, userID)
 	if err != nil {
-		return err
+		return fmt.Errorf("ws ensure member: %w", err)
 	}
 	if !exists {
 		return ErrNotRoomMember
@@ -142,14 +151,18 @@ func (srv *EventService) handleSendMessage(
 		return nil, err
 	}
 
+	if strings.TrimSpace(payload.Content) == "" {
+		return nil, ErrInvalidPayload
+	}
+
 	msgID, err := srv.messageStore.Create(ctx, roomID, userID, payload.Content)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ws create message: %w", err)
 	}
 
 	msg, err := srv.messageStore.GetResponseById(ctx, msgID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ws get response message: %w", err)
 	}
 
 	msg.Nonce = &payload.Nonce
@@ -179,9 +192,17 @@ func (srv *EventService) handleEditMessage(
 		return nil, err
 	}
 
+	if strings.TrimSpace(payload.Content) == "" {
+		return nil, ErrInvalidPayload
+	}
+
 	msg, err := srv.messageStore.GetById(ctx, payload.MessageID)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, models.ErrNotFound) {
+			return nil, ErrForbidden
+		}
+
+		return nil, fmt.Errorf("edit ws get message=%d: %w", payload.MessageID, err)
 	}
 
 	if msg.UserId != userID {
@@ -189,12 +210,16 @@ func (srv *EventService) handleEditMessage(
 	}
 
 	if err := srv.messageStore.UpdateContent(ctx, payload.MessageID, payload.Content); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("edit ws update content: %w", err)
 	}
 
 	updatedMsg, err := srv.messageStore.GetResponseById(ctx, payload.MessageID)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, models.ErrNotFound) {
+			return nil, ErrForbidden
+		}
+
+		return nil, fmt.Errorf("edit ws get response message: %w", err)
 	}
 
 	return &models.BaseEvent{
@@ -223,7 +248,11 @@ func (srv *EventService) handleDeleteMessage(
 
 	msg, err := srv.messageStore.GetById(ctx, payload.MessageID)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, models.ErrNotFound) {
+			return nil, ErrForbidden
+		}
+
+		return nil, fmt.Errorf("delete ws get message=%d: %w", payload.MessageID, err)
 	}
 
 	if msg.UserId != userID {
@@ -231,7 +260,11 @@ func (srv *EventService) handleDeleteMessage(
 	}
 
 	if err := srv.messageStore.DeleteById(ctx, payload.MessageID); err != nil {
-		return nil, err
+		if errors.Is(err, models.ErrNotFound) {
+			return nil, ErrForbidden
+		}
+
+		return nil, fmt.Errorf("delete ws delete message=%d: %w", payload.MessageID, err)
 	}
 
 	return &models.BaseEvent{

@@ -1,6 +1,7 @@
 package event
 
 import (
+	"errors"
 	"log"
 
 	"github.com/ayushgpt01/chatRoomGo/internal/models"
@@ -8,7 +9,7 @@ import (
 
 func NewErrorEvent(err error) models.ChatEvent {
 	code, message := mapErrorCode(err)
-	log.Printf("[Error Event]: %s", err)
+	log.Printf("[Error Event]: %v", err)
 
 	return &models.BaseEvent{
 		EventType: models.EventError,
@@ -20,14 +21,14 @@ func NewErrorEvent(err error) models.ChatEvent {
 }
 
 func mapErrorCode(err error) (code string, message string) {
-	switch err {
-	case ErrInvalidPayload:
+	switch {
+	case errors.Is(err, ErrInvalidPayload):
 		return "invalid_payload", err.Error()
-	case ErrNotRoomMember:
+	case errors.Is(err, ErrNotRoomMember):
 		return "not_room_member", err.Error()
-	case ErrForbidden:
+	case errors.Is(err, ErrForbidden):
 		return "forbidden", err.Error()
-	case ErrUnsupportedEvent:
+	case errors.Is(err, ErrUnsupportedEvent):
 		return "unsupported_event", err.Error()
 	default:
 		return "internal_error", "something went wrong"

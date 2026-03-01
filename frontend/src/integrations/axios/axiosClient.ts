@@ -51,8 +51,23 @@ axiosClient.interceptors.response.use(
 	async (error) => {
 		const originalRequest = error.config;
 
+		const authUrls = ["/auth/refresh", "/auth/logout", "/auth/login"];
+		const isAuthRequest = authUrls.some((url) =>
+			originalRequest.url.includes(url),
+		);
+
 		// 401 Unauthorized: Trigger Token Refresh
-		if (error.response?.status === 401 && !originalRequest._retry) {
+		if (error.response?.status === 401) {
+			if (isAuthRequest) {
+				console.warn("Auth request failed with 401, forcing logout.");
+				useAuthStore.getState().logout();
+				return Promise.reject(error);
+			}
+
+			if (originalRequest._retry) {
+				return;
+			}
+
 			if (isRefreshing) {
 				return new Promise((resolve, reject) => {
 					failedQueue.push({ resolve, reject });

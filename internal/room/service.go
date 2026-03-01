@@ -2,6 +2,8 @@ package room
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"github.com/ayushgpt01/chatRoomGo/internal/auth"
 	"github.com/ayushgpt01/chatRoomGo/internal/models"
@@ -25,7 +27,7 @@ func (srv *RoomService) HandleJoinRoom(ctx context.Context, payload JoinRoomPayl
 	if targetUserId == 0 {
 		login, err := srv.authService.HandleGuestSignup(ctx)
 		if err != nil {
-			return JoinRoomResponse{}, err
+			return JoinRoomResponse{}, fmt.Errorf("join room guest signup: %w", err)
 		}
 
 		loginRes = &login
@@ -34,11 +36,15 @@ func (srv *RoomService) HandleJoinRoom(ctx context.Context, payload JoinRoomPayl
 
 	room, err := srv.roomStore.GetById(ctx, payload.Id)
 	if err != nil {
-		return JoinRoomResponse{}, err
+		if errors.Is(err, models.ErrNotFound) {
+			return JoinRoomResponse{}, models.ErrForbidden
+		}
+
+		return JoinRoomResponse{}, fmt.Errorf("join room get room=%d: %w", payload.Id, err)
 	}
 
 	if err = srv.roomMemberStore.JoinRoom(ctx, room.Id, targetUserId); err != nil {
-		return JoinRoomResponse{}, err
+		return JoinRoomResponse{}, fmt.Errorf("join room: %w", err)
 	}
 
 	srv.hub.Broadcast(room.Id, &models.BaseEvent{
@@ -61,27 +67,33 @@ func (srv *RoomService) HandleJoinRoom(ctx context.Context, payload JoinRoomPayl
 func (srv *RoomService) HandleLeaveRoom(ctx context.Context, payload LeaveRoomPayload) error {
 	err := srv.roomMemberStore.LeaveRoom(ctx, payload.Id, payload.UserId)
 
-	if err == nil {
-		srv.hub.Broadcast(payload.Id, &models.BaseEvent{
-			EventType: models.EventUserLeftRoom,
-			Data: map[string]any{
-				"roomId": payload.Id,
-				"userId": payload.UserId,
-			},
-		})
+	if err != nil {
+		if errors.Is(err, models.ErrNotFound) {
+			return models.ErrForbidden
+		}
+
+		return fmt.Errorf("handle leave room: %w", err)
 	}
 
-	return err
+	srv.hub.Broadcast(payload.Id, &models.BaseEvent{
+		EventType: models.EventUserLeftRoom,
+		Data: map[string]any{
+			"roomId": payload.Id,
+			"userId": payload.UserId,
+		},
+	})
+
+	return nil
 }
 
 func (srv *RoomService) HandleCreateRoom(ctx context.Context, payload CreateRoomPayload) (CreateRoomResponse, error) {
 	room, err := srv.roomStore.Create(ctx, payload.Name)
 	if err != nil {
-		return CreateRoomResponse{}, err
+		return CreateRoomResponse{}, fmt.Errorf("create room name=%s: %w", payload.Name, err)
 	}
 
 	if err = srv.roomMemberStore.JoinRoom(ctx, room.Id, payload.UserId); err != nil {
-		return CreateRoomResponse{}, err
+		return CreateRoomResponse{}, fmt.Errorf("create room join user: %w", err)
 	}
 
 	return CreateRoomResponse{
@@ -95,7 +107,7 @@ func (srv *RoomService) HandleCreateRoom(ctx context.Context, payload CreateRoom
 func (srv *RoomService) HandleGetRooms(ctx context.Context, payload GetRoomPayload) (GetRoomResponse, error) {
 	rooms, nextCursor, err := srv.roomMemberStore.GetRoomsByUserId(ctx, payload.UserId, payload.Limit, payload.Cursor)
 	if err != nil {
-		return GetRoomResponse{}, err
+		return GetRoomResponse{}, fmt.Errorf("get rooms: %w", err)
 	}
 
 	var responseRooms []ResponseRoom

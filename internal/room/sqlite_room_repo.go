@@ -3,6 +3,7 @@ package room
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/ayushgpt01/chatRoomGo/internal/models"
@@ -24,7 +25,7 @@ func NewSQLiteRoomRepo(ctx context.Context, db *sql.DB) (*SQLiteRoomRepo, error)
 	store := SQLiteRoomRepo{db}
 
 	if err := store.init(ctx); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("initializing rooms table: %w", err)
 	}
 
 	return &store, nil
@@ -45,11 +46,11 @@ func (s *SQLiteRoomRepo) init(ctx context.Context) error {
 	END;`
 
 	if _, err := s.db.ExecContext(ctx, createTableSQL); err != nil {
-		return err
+		return fmt.Errorf("creating rooms table: %w", err)
 	}
 
 	if _, err := s.db.ExecContext(ctx, createTriggerSQL); err != nil {
-		return err
+		return fmt.Errorf("creating update_room_timestamp trigger: %w", err)
 	}
 
 	return nil
@@ -58,29 +59,37 @@ func (s *SQLiteRoomRepo) init(ctx context.Context) error {
 func (s *SQLiteRoomRepo) Create(ctx context.Context, name string) (*models.Room, error) {
 	res, err := s.db.ExecContext(ctx, "INSERT INTO rooms(name) VALUES(?)", name)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("inserting room with name %q: %w", name, err)
 	}
 
 	roomId, err := res.LastInsertId()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting last insert id for room %q: %w", name, err)
 	}
 
 	room, err := s.GetById(ctx, roomId)
-	return room, err
+	if err != nil {
+		return nil, fmt.Errorf("fetching created room %d: %w", roomId, err)
+	}
+
+	return room, nil
 }
 
 func (s *SQLiteRoomRepo) GetById(ctx context.Context, roomId models.RoomId) (*models.Room, error) {
 	var room models.Room
-	row := s.db.QueryRowContext(ctx, "SELECT id, name, created_at, updated_at FROM rooms WHERE id = ?", roomId)
+
+	row := s.db.QueryRowContext(
+		ctx,
+		"SELECT id, name, created_at, updated_at FROM rooms WHERE id = ?",
+		roomId,
+	)
+
 	err := row.Scan(&room.Id, &room.Name, &room.CreatedAt, &room.UpdatedAt)
-
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("GetById %d: no such room", roomId)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("getting room by id %d: %w", roomId, models.ErrNotFound)
 		}
-
-		return nil, fmt.Errorf("GetById %d: %v", roomId, err)
+		return nil, fmt.Errorf("scanning room by id %d: %w", roomId, err)
 	}
 
 	return &room, nil
@@ -89,16 +98,16 @@ func (s *SQLiteRoomRepo) GetById(ctx context.Context, roomId models.RoomId) (*mo
 func (s *SQLiteRoomRepo) UpdateName(ctx context.Context, roomId models.RoomId, name string) error {
 	res, err := s.db.ExecContext(ctx, "UPDATE rooms SET name = ? WHERE id = ?", name, roomId)
 	if err != nil {
-		return err
+		return fmt.Errorf("updating room name for id %d: %w", roomId, err)
 	}
 
 	count, err := res.RowsAffected()
 	if err != nil {
-		return err
+		return fmt.Errorf("checking rows affected for update room %d: %w", roomId, err)
 	}
 
 	if count == 0 {
-		return fmt.Errorf("Room not found for id: %d", roomId)
+		return fmt.Errorf("updating room name for id %d: %w", roomId, models.ErrNotFound)
 	}
 
 	return nil
@@ -107,16 +116,16 @@ func (s *SQLiteRoomRepo) UpdateName(ctx context.Context, roomId models.RoomId, n
 func (s *SQLiteRoomRepo) Delete(ctx context.Context, roomId models.RoomId) error {
 	res, err := s.db.ExecContext(ctx, "DELETE FROM rooms WHERE id = ?", roomId)
 	if err != nil {
-		return err
+		return fmt.Errorf("deleting room by id %d: %w", roomId, err)
 	}
 
 	count, err := res.RowsAffected()
 	if err != nil {
-		return err
+		return fmt.Errorf("checking rows affected for delete room %d: %w", roomId, err)
 	}
 
 	if count == 0 {
-		return fmt.Errorf("Room not found for id: %d", roomId)
+		return fmt.Errorf("deleting room by id %d: %w", roomId, models.ErrNotFound)
 	}
 
 	return nil

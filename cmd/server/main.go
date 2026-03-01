@@ -19,6 +19,7 @@ import (
 	"github.com/ayushgpt01/chatRoomGo/internal/message"
 	"github.com/ayushgpt01/chatRoomGo/internal/room"
 	"github.com/ayushgpt01/chatRoomGo/internal/router"
+	"github.com/ayushgpt01/chatRoomGo/internal/seed"
 	"github.com/ayushgpt01/chatRoomGo/internal/user"
 	"github.com/ayushgpt01/chatRoomGo/internal/ws"
 )
@@ -75,6 +76,10 @@ func main() {
 		os.Exit(1)
 	}
 	log.Printf("Initialised Auth Repo\n")
+
+	if err := seed.SeedChatData(context.Background(), db); err != nil {
+		log.Fatal(err)
+	}
 
 	hub := ws.NewHub(ctx)
 	go hub.Cleanup()

@@ -3,6 +3,7 @@ package user
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/ayushgpt01/chatRoomGo/internal/models"
@@ -26,7 +27,7 @@ func NewSqliteUserRepo(ctx context.Context, db *sql.DB) (*SQLiteUserRepo, error)
 	store := SQLiteUserRepo{db}
 
 	if err := store.init(ctx); err != nil {
-		return nil, fmt.Errorf("Could not initalise store: %v", err)
+		return nil, fmt.Errorf("init user repo: %w", err)
 	}
 
 	return &store, nil
@@ -52,11 +53,11 @@ func (s *SQLiteUserRepo) init(ctx context.Context) error {
 	`
 
 	if _, err := s.db.ExecContext(ctx, createTableSQL); err != nil {
-		return err
+		return fmt.Errorf("create users table: %w", err)
 	}
 
 	if _, err := s.db.ExecContext(ctx, createTriggerSQL); err != nil {
-		return err
+		return fmt.Errorf("create user update trigger: %w", err)
 	}
 
 	return nil
@@ -72,11 +73,11 @@ func (s *SQLiteUserRepo) GetById(ctx context.Context, id models.UserId) (*models
 	err := row.Scan(&user.Id, &user.Name, &user.Username, &user.CreatedAt, &user.UpdatedAt, &user.Password, &user.AccountRole)
 
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("GetById %d: no such user", id)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("get user by id=%d: %w", id, models.ErrNotFound)
 		}
 
-		return nil, fmt.Errorf("GetById %d: %v", id, err)
+		return nil, fmt.Errorf("get user by id=%d: %w", id, err)
 	}
 
 	return &user, nil
@@ -92,11 +93,10 @@ func (s *SQLiteUserRepo) GetByUsername(ctx context.Context, username string) (*m
 	err := row.Scan(&user.Id, &user.Name, &user.Username, &user.CreatedAt, &user.UpdatedAt, &user.Password, &user.AccountRole)
 
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("GetByUsername %s: no such user", username)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("get user by username=%s: %w", username, models.ErrNotFound)
 		}
-
-		return nil, fmt.Errorf("GetByUsername %s: %v", username, err)
+		return nil, fmt.Errorf("get user by username=%s: %w", username, err)
 	}
 
 	return &user, nil
@@ -110,26 +110,30 @@ func (s *SQLiteUserRepo) Create(ctx context.Context, username, name, passwordHas
 	query := "INSERT INTO users(name, user_name, password_hash, account_role) VALUES(?, ?, ?, ?)"
 	res, err := s.db.ExecContext(ctx, query, name, username, passwordHash, role)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("create user username=%s: %w", username, err)
 	}
 
 	userId, err := res.LastInsertId()
-	return userId, err
+	if err != nil {
+		return 0, fmt.Errorf("get last insert id username=%s: %w", username, err)
+	}
+
+	return userId, nil
 }
 
 func (s *SQLiteUserRepo) UpdateName(ctx context.Context, id models.UserId, name string) error {
 	res, err := s.db.ExecContext(ctx, "UPDATE users SET name = ? WHERE id = ?", name, id)
 	if err != nil {
-		return err
+		return fmt.Errorf("update name id=%d: %w", id, err)
 	}
 
 	count, err := res.RowsAffected()
 	if err != nil {
-		return err
+		return fmt.Errorf("update name rows affected id=%d: %w", id, err)
 	}
 
 	if count == 0 {
-		return fmt.Errorf("User not found for id: %d", id)
+		return fmt.Errorf("update name id=%d: %w", id, models.ErrNotFound)
 	}
 
 	return nil
@@ -138,16 +142,16 @@ func (s *SQLiteUserRepo) UpdateName(ctx context.Context, id models.UserId, name 
 func (s *SQLiteUserRepo) UpdateUsername(ctx context.Context, id models.UserId, username string) error {
 	res, err := s.db.ExecContext(ctx, "UPDATE users SET user_name = ? WHERE id = ?", username, id)
 	if err != nil {
-		return err
+		return fmt.Errorf("update user name id=%d: %w", id, err)
 	}
 
 	count, err := res.RowsAffected()
 	if err != nil {
-		return err
+		return fmt.Errorf("update user name rows affected id=%d: %w", id, err)
 	}
 
 	if count == 0 {
-		return fmt.Errorf("User not found for id: %d", id)
+		return fmt.Errorf("update user name id=%d: %w", id, models.ErrNotFound)
 	}
 
 	return nil
@@ -156,16 +160,16 @@ func (s *SQLiteUserRepo) UpdateUsername(ctx context.Context, id models.UserId, u
 func (s *SQLiteUserRepo) DeleteById(ctx context.Context, id models.UserId) error {
 	res, err := s.db.ExecContext(ctx, "DELETE FROM users WHERE id = ?", id)
 	if err != nil {
-		return err
+		return fmt.Errorf("delete user id=%d: %w", id, err)
 	}
 
 	count, err := res.RowsAffected()
 	if err != nil {
-		return err
+		return fmt.Errorf("delete user rows affected id=%d: %w", id, err)
 	}
 
 	if count == 0 {
-		return fmt.Errorf("User not found for id: %d", id)
+		return fmt.Errorf("delete user id=%d: %w", id, models.ErrNotFound)
 	}
 
 	return nil

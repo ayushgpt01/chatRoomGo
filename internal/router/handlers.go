@@ -15,6 +15,7 @@ func handleAPIRoutes(mux *http.ServeMux, authService *auth.AuthService, roomServ
 	apiMux.Handle("POST /auth/login", auth.HandleLogin(authService))
 	apiMux.Handle("POST /auth/signup", auth.HandleSignup(authService))
 	apiMux.Handle("POST /auth/refresh", auth.HandleRefresh(authService))
+	apiMux.Handle("POST /auth/logout", auth.HandleLogout(authService))
 
 	// Allows guest as well
 	apiMux.Handle("POST /room/join", authService.OptionalMiddleware(room.HandleJoinRoom(roomService)))
@@ -23,7 +24,6 @@ func handleAPIRoutes(mux *http.ServeMux, authService *auth.AuthService, roomServ
 
 	// Protected Routes
 	protectedMux.Handle("GET /auth/me", auth.HandleMe(authService))
-	protectedMux.Handle("POST /auth/logout", auth.HandleLogout(authService))
 	protectedMux.Handle("POST /room/leave", room.HandleLeaveRoom(roomService))
 	protectedMux.Handle("GET /room/getAll", room.HandleGetRooms(roomService))
 	protectedMux.Handle("POST /room/create", room.HandleCreateRoom(roomService))
