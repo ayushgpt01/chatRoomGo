@@ -97,9 +97,10 @@ func (srv *AuthService) HandleGuestSignup(ctx context.Context) (LoginResponse, e
 
 	return LoginResponse{
 		User: ResponseUser{
-			Id:       user.Id,
-			Username: user.Username,
-			Name:     user.Name,
+			Id:          user.Id,
+			Username:    user.Username,
+			Name:        user.Name,
+			IsAnonymous: user.AccountRole == models.AccountRoleGuest,
 		},
 		Token:        token,
 		RefreshToken: refreshToken,
@@ -137,9 +138,10 @@ func (srv *AuthService) HandleSignup(ctx context.Context, payload SignupPayload)
 
 	return LoginResponse{
 		User: ResponseUser{
-			Id:       user.Id,
-			Username: user.Username,
-			Name:     user.Name,
+			Id:          user.Id,
+			Username:    user.Username,
+			Name:        user.Name,
+			IsAnonymous: user.AccountRole == models.AccountRoleGuest,
 		},
 		Token:        token,
 		RefreshToken: refreshToken,
@@ -175,9 +177,10 @@ func (srv *AuthService) HandleLogin(ctx context.Context, payload LoginPayload) (
 
 	return LoginResponse{
 		User: ResponseUser{
-			Id:       u.Id,
-			Username: u.Username,
-			Name:     u.Name,
+			Id:          u.Id,
+			Username:    u.Username,
+			Name:        u.Name,
+			IsAnonymous: u.AccountRole == models.AccountRoleGuest,
 		},
 		Token:        token,
 		RefreshToken: refreshToken,
@@ -207,9 +210,10 @@ func (srv *AuthService) GetCurrentUser(ctx context.Context, accessToken string) 
 	}
 
 	return ResponseUser{
-		Id:       user.Id,
-		Username: user.Username,
-		Name:     user.Name,
+		Id:          user.Id,
+		Username:    user.Username,
+		Name:        user.Name,
+		IsAnonymous: user.AccountRole == models.AccountRoleGuest,
 	}, nil
 }
 

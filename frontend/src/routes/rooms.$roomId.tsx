@@ -1,36 +1,53 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import MessageList from "@/components/MessageList";
+import RoomsSidebar from "@/components/RoomsSidebar";
+import useMessagesStore from "@/stores/messagesStore";
 import useRoomStore from "@/stores/roomStore";
 import useToastStore from "@/stores/toastStore";
 
 export const Route = createFileRoute("/rooms/$roomId")({
-	component: RouteComponent,
+	component: RoomComponent,
 	beforeLoad: ({ context }) => {
 		// Access auth via context, not the store directly
 		if (!context.auth.isAuthenticated) {
 			throw redirect({ to: "/login" });
 		}
 	},
+	loader: async ({ params }) => {
+		const roomId = Number(params.roomId);
+
+		const roomStore = useRoomStore.getState();
+		const messageStore = useMessagesStore.getState();
+
+		// Fetch rooms list once
+		if (roomStore.roomsList.length === 0 && roomStore.hasMore) {
+			await roomStore.getRooms();
+		}
+
+		// Fetch initial messages for this room
+		const roomMessages = messageStore.getMessage(roomId);
+
+		if (roomMessages.messages.length === 0 && roomMessages.hasMore) {
+			await messageStore.fetchMessages(roomId);
+		}
+
+		return null;
+	},
 });
 
-let counter = 3;
-
-function RouteComponent() {
+function RoomComponent() {
 	const navigate = useNavigate();
 	const { roomId } = Route.useParams();
+	const [message, setMessage] = useState("");
+
+	const room = useRoomStore((s) => s.room);
 	const leave = useRoomStore((s) => s.leave);
 	const isLeaving = useRoomStore((s) => s.isLeaving);
-
 	const showToast = useToastStore((s) => s.show);
-	const [message, setMessage] = useState("");
-	const [messages, setMessages] = useState([
-		{ id: 1, message: "Welcome to the room!" },
-		{ id: 2, message: "This UI is clean." },
-	]);
 
 	const sendMessage = () => {
 		if (!message.trim()) return;
-		setMessages((prev) => [...prev, { id: counter++, message }]);
 		setMessage("");
 	};
 
@@ -50,23 +67,15 @@ function RouteComponent() {
 	return (
 		<div className="h-screen flex bg-base-200">
 			{/* Sidebar */}
-			<div className="w-64 bg-base-100 border-r hidden md:block">
-				<div className="p-4 font-bold text-lg">Room: {roomId}</div>
-				<ul className="menu p-2">
-					<li>
-						<a href="#s">General</a>
-					</li>
-					<li>
-						<a href="#s">Random</a>
-					</li>
-				</ul>
-			</div>
+			<RoomsSidebar />
 
 			{/* Chat Area */}
 			<div className="flex-1 flex flex-col">
 				{/* Header */}
-				<div className="navbar bg-base-100 border-b px-4">
-					<div className="flex-1 font-semibold">Room: {roomId}</div>
+				<div className="navbar h-16 bg-base-100 border-b px-4">
+					<div className="flex-1 font-semibold">
+						Room: {room?.name || `Room ${roomId}`}
+					</div>
 					<button
 						type="button"
 						className="btn btn-sm btn-outline"
@@ -84,14 +93,7 @@ function RouteComponent() {
 					</button>
 				</div>
 
-				{/* Messages */}
-				<div className="flex-1 overflow-y-auto p-4 space-y-3">
-					{messages.map((msg) => (
-						<div key={msg.id} className="chat chat-start">
-							<div className="chat-bubble">{msg.message}</div>
-						</div>
-					))}
-				</div>
+				<MessageList roomId={Number(roomId)} />
 
 				{/* Input */}
 				<div className="p-4 bg-base-100 border-t flex gap-2">

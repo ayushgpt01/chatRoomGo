@@ -1,6 +1,12 @@
+import { z } from "zod";
 import axiosClient from "@/integrations/axios/axiosClient";
 import { UserSchema } from "@/types/auth";
-import { type Room, RoomSchema } from "@/types/room";
+import {
+	type GetRooms,
+	GetRoomsSchema,
+	type Room,
+	RoomSchema,
+} from "@/types/room";
 import type { LoginResponse } from "./authService";
 
 type JoinRoomResponse = {
@@ -10,6 +16,11 @@ type JoinRoomResponse = {
 
 type CreateRoomResponse = {
 	room: Room;
+};
+
+type GetRoomsResponse = {
+	rooms: Room[];
+	nextCursor: string | null;
 };
 
 export const roomService = {
@@ -42,6 +53,18 @@ export const roomService = {
 
 		const data = response.data;
 		RoomSchema.parse(data.room);
+		return data;
+	},
+
+	getRooms: async (payload: GetRooms) => {
+		const params = GetRoomsSchema.parse(payload);
+
+		const response = await axiosClient.get<GetRoomsResponse>("/room/getAll", {
+			params,
+		});
+
+		const data = response.data;
+		z.array(RoomSchema).parse(data.rooms);
 		return data;
 	},
 };

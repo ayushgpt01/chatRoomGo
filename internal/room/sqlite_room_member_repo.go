@@ -15,6 +15,7 @@ type RoomMemberStore interface {
 	Exists(ctx context.Context, roomId models.RoomId, userId models.UserId) (bool, error)
 	CountByRoomId(ctx context.Context, roomId models.RoomId) (int, error)
 	GetByRoomId(ctx context.Context, roomId models.RoomId) ([]models.UserId, error)
+	GetRoomsByUserId(ctx context.Context, userId models.UserId, limit int, cursor *string) ([]*models.Room, *string, error)
 }
 
 type SQLiteRoomMemberRepo struct {
@@ -125,4 +126,51 @@ func (s *SQLiteRoomMemberRepo) GetByRoomId(ctx context.Context, roomId models.Ro
 	}
 
 	return ids, nil
+}
+
+func (s *SQLiteRoomMemberRepo) GetRoomsByUserId(ctx context.Context, userId models.UserId, limit int, cursor *string) ([]*models.Room, *string, error) {
+	query := `SELECT r.id, r.name, r.created_at, r.updated_at
+	FROM rooms r
+	JOIN room_members rm ON r.id = rm.room_id
+	WHERE rm.user_id = ?`
+
+	args := []any{userId}
+
+	if cursor != nil && *cursor != "" {
+		query += " AND r.id < ? "
+		args = append(args, *cursor)
+	}
+
+	query += " ORDER BY r.id DESC LIMIT ?"
+	args = append(args, limit+1)
+
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer rows.Close()
+
+	var rooms []*models.Room
+	for rows.Next() {
+		room := &models.Room{}
+		err := rows.Scan(&room.Id, &room.Name, &room.CreatedAt, &room.UpdatedAt)
+		if err != nil {
+			return nil, nil, err
+		}
+		rooms = append(rooms, room)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, nil, err
+	}
+
+	var nextCursor *string
+	if len(rooms) > limit {
+		lastRoom := rooms[limit-1]
+		c := fmt.Sprintf("%d", lastRoom.Id)
+		nextCursor = &c
+		rooms = rooms[:limit]
+	}
+
+	return rooms, nextCursor, nil
 }

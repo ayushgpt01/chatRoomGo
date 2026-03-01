@@ -24,6 +24,7 @@ func handleAPIRoutes(mux *http.ServeMux, authService *auth.AuthService, roomServ
 	protectedMux.Handle("GET /auth/me", auth.HandleMe(authService))
 	protectedMux.Handle("POST /auth/logout", auth.HandleLogout(authService))
 	protectedMux.Handle("POST /room/leave", room.HandleLeaveRoom(roomService))
+	protectedMux.Handle("GET /room/getAll", room.HandleGetRooms(roomService))
 	protectedMux.Handle("POST /room/create", room.HandleCreateRoom(roomService))
 
 	apiMux.Handle("/", authService.Middleware(protectedMux))

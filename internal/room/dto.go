@@ -33,3 +33,14 @@ type CreateRoomPayload struct {
 type CreateRoomResponse struct {
 	Room ResponseRoom `json:"room"`
 }
+
+type GetRoomPayload struct {
+	UserId models.UserId `json:"userId"`
+	Limit  int           `json:"limit"`
+	Cursor *string       `json:"cursor"`
+}
+
+type GetRoomResponse struct {
+	Rooms      []ResponseRoom `json:"rooms"`
+	NextCursor *string        `json:"nextCursor"`
+}

@@ -6,6 +6,7 @@ import { getErrorMessage } from "@/utils/errorHandler";
 
 export interface AuthState {
 	user: User | null;
+	initialized: boolean;
 	isAuthenticated: boolean;
 	isAuthenticating: boolean;
 	isCreating: boolean;
@@ -21,6 +22,7 @@ const useAuthStore = create<AuthState>()(
 	persist(
 		(set, get) => ({
 			user: null,
+			initialized: false,
 			isAuthenticated: false,
 			isAuthenticating: false,
 			isCreating: false,
@@ -78,9 +80,10 @@ const useAuthStore = create<AuthState>()(
 				if (!localStorage.getItem("token")) return;
 				try {
 					const user = await authService.getCurrentUser();
-					set({ user, isAuthenticated: true });
+					set({ user, isAuthenticated: true, initialized: true });
 				} catch {
 					get().logout();
+					set({ initialized: true });
 				}
 			},
 		}),

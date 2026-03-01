@@ -7,22 +7,36 @@ import { getErrorMessage } from "@/utils/errorHandler";
 
 export interface RoomState {
 	room: Room | null;
+	roomsList: Room[];
+
 	isJoining: boolean;
 	isLeaving: boolean;
 	isCreating: boolean;
+	isFetching: boolean;
+
+	hasMore: boolean;
+	cursor: string | null;
 	error: string | null;
+
 	create: (roomName: string) => Promise<number>;
 	join: (roomId: number) => Promise<{ login: LoginResponse | undefined }>;
 	leave: () => Promise<void>;
+	getRooms: () => Promise<void>;
 }
 
 const useRoomStore = create<RoomState>()(
 	persist(
 		(set, get) => ({
 			room: null,
+			roomsList: [],
+
 			isJoining: false,
 			isLeaving: false,
 			isCreating: false,
+			isFetching: false,
+
+			hasMore: true,
+			cursor: null,
 			error: null,
 
 			join: async (payload) => {
@@ -65,6 +79,33 @@ const useRoomStore = create<RoomState>()(
 						isLeaving: false,
 					});
 					throw err;
+				}
+			},
+			getRooms: async () => {
+				const { isFetching, hasMore } = get();
+				if (isFetching || !hasMore) return;
+
+				set({ isFetching: true, error: null });
+				const cursor = get().cursor;
+
+				try {
+					const { rooms, nextCursor } = await roomService.getRooms({
+						cursor,
+						limit: 50,
+					});
+
+					set((state) => ({
+						isFetching: false,
+						roomsList: [...state.roomsList, ...rooms],
+						cursor: nextCursor,
+						hasMore: nextCursor !== null,
+					}));
+				} catch (err) {
+					set({
+						error: getErrorMessage(err),
+						isFetching: false,
+						hasMore: false,
+					});
 				}
 			},
 		}),

@@ -6,6 +6,7 @@ import NotFound from "@/components/NotFound";
 import ToastContainer from "@/components/ToastContainer";
 import TanStackQueryDevtools from "@/integrations/tanstack-query/devtools";
 import type { AuthState } from "@/stores/authStore";
+import useAuthStore from "@/stores/authStore";
 
 interface MyRouterContext {
 	queryClient: QueryClient;
@@ -13,6 +14,15 @@ interface MyRouterContext {
 }
 
 export const Route = createRootRouteWithContext<MyRouterContext>()({
+	loader: async () => {
+		const authStore = useAuthStore.getState();
+
+		if (!authStore.initialized) {
+			await authStore.checkAuth();
+		}
+
+		return null;
+	},
 	component: () => (
 		<>
 			<Outlet />

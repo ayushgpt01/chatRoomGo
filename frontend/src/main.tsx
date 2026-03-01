@@ -1,5 +1,5 @@
 import { RouterProvider } from "@tanstack/react-router";
-import { StrictMode, useEffect } from "react";
+import { StrictMode } from "react";
 import ReactDOM from "react-dom/client";
 import TanStackQueryProvider, {
 	queryClient,
@@ -11,10 +11,6 @@ import "./styles.css";
 
 const App = () => {
 	const auth = useAuthStore();
-
-	useEffect(() => {
-		auth.checkAuth();
-	}, [auth.checkAuth]);
 
 	return (
 		<TanStackQueryProvider>

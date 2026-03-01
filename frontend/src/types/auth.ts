@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const UserSchema = z.object({
-	id: z.number(),
+	id: z.coerce.number(),
 	username: z.string().max(255),
 	name: z.string().min(2),
 	isAnonymous: z.boolean().optional(),

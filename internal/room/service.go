@@ -91,3 +91,23 @@ func (srv *RoomService) HandleCreateRoom(ctx context.Context, payload CreateRoom
 		},
 	}, nil
 }
+
+func (srv *RoomService) HandleGetRooms(ctx context.Context, payload GetRoomPayload) (GetRoomResponse, error) {
+	rooms, nextCursor, err := srv.roomMemberStore.GetRoomsByUserId(ctx, payload.UserId, payload.Limit, payload.Cursor)
+	if err != nil {
+		return GetRoomResponse{}, err
+	}
+
+	var responseRooms []ResponseRoom
+	for _, room := range rooms {
+		responseRooms = append(responseRooms, ResponseRoom{
+			Id:   room.Id,
+			Name: room.Name,
+		})
+	}
+
+	return GetRoomResponse{
+		Rooms:      responseRooms,
+		NextCursor: nextCursor,
+	}, nil
+}
