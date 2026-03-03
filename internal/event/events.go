@@ -11,11 +11,10 @@ func NewErrorEvent(err error) models.ChatEvent {
 	code, message := mapErrorCode(err)
 	log.Printf("[Error Event]: %v", err)
 
-	return &models.BaseEvent{
-		EventType: models.EventError,
-		Data: map[string]any{
-			"message": message,
-			"code":    code,
+	return &models.ErrorEvent{
+		Data: models.ErrorPayload{
+			Message: message,
+			Code:    code,
 		},
 	}
 }

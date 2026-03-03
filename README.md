@@ -1,76 +1,67 @@
-# Chat Room Web Server with WebSocket
+# ChatRoomGo
 
-This project implements a simple chat room web server using WebSocket for real-time communication between clients.
+I built this project to explore how to handle real-time, concurrent connections in **Go** and how to manage that state effectively on the **Frontend** using the modern TanStack ecosystem.
 
-## Features
+It’s a multi-room chat app where everything—from user accounts to message history—is persisted in a local SQLite database.
 
-- **WebSocket Communication:** Allows real-time messaging between clients.
-- **Message Handling:** Supports sending and receiving messages with basic error handling.
-- **Static File Serving:** Serves static HTML and JavaScript files for client-side rendering.
-- **Custom Chat Components:** Includes custom web components for rendering chat messages.
+## 💡 What’s interesting about this project?
 
-## Requirements
+### **1. The Backend (Go)**
 
-- Go (Golang)
-- WebSocket library (Gorilla WebSocket for Go, native WebSocket API for JavaScript)
+* **Real-time with WebSockets:** I built a `Hub` system for websockets implementation. It uses Go routines and channels to broadcast messages to the right rooms without blocking the main execution.
+* **CGO-Free SQLite:** I used a pure Go SQLite driver (`modernc.org/sqlite`). This means the project is super easy to compile and run on any machine without needing a C compiler installed.
+* **Clean Architecture:** I separated the code into `internal/auth`, `internal/room`, and `internal/ws`. This keeps the business logic away from the database code, making it much easier to maintain or swap out the database later.
 
-## Setup
+### **2. The Frontend (React 19)**
 
-### Server (Go)
+* **Type-Safe Routing:** I used **TanStack Router**. If you try to navigate to a route that doesn't exist or pass the wrong params, the TypeScript compiler will catch it before you even run the code.
+* **Smart Data Fetching:** **TanStack Query** handles the API states (loading, error, caching), so the UI always feels snappy and stays in sync with the backend.
+* **Validation:** I use **Zod** to validate API responses. If the backend sends something unexpected, the app catches it at the "border" instead of crashing deep inside a component.
 
-1. Clone the repository:
+## Tech Stack
 
-   ```bash
-   git clone https://github.com/ayushgpt01/chatRoomGo.git
-   cd chat-room
-   ```
+* **Backend:** Go, Gorilla WebSockets (for real-time), JWT (for auth).
+* **Database:** SQLite (Single file, no setup required).
+* **Frontend:** React 19, TypeScript, TanStack Router & Query, Tailwind CSS 4.0.
+* **State Management:** Zustand (for auth and socket state).
 
-2. Build and run the server:
+## How it's organized
 
-   ```bash
-   go run main.go
-   ```
-
-The server will start at http://localhost:8080.
-
-<!-- ### Client (JavaScript)
-
-1. Ensure Node.js is installed.
-
-2. Install dependencies:
-
-   ```bash
-   npm install
-    ```
-
-3. Start the development server:
-
-    ```bash
-    npm start
-    ```
-
-This will serve the client at http://localhost:3000. -->
-
-## Usage
-
-1. Open `http://localhost:8000` in your web browser.
-2. Enter a message in the input field and click "Send Message" to send it to other connected clients.
-3. Messages from other clients will appear in the chat window.
-
-## Project Structure
+```text
+├── cmd/server          # Entry point where the server starts
+├── internal/           # The "brains" of the app
+│   ├── auth            # Login/Signup logic
+│   ├── ws              # WebSocket hub and client "pumps"
+│   └── models          # Database schemas and shared types
+├── frontend/           # Vite + React app
+│   ├── src/routes      # File-based routing
+│   └── src/services    # API calls using Axios
 
 ```
-main.go # Server file
-go.mod
-go.sum
-static
-├── index.html   # HTML template for the chat room interface
-├── index.js     # JavaScript for handling UI and WebSocket connections
-└── utils
-    ├── helpers.js          # JavaScript helper functions
-    ├── websocket.js        # WebSocket initialization and event handling
-    └── components
-        ├── CustomChatElement.js  # Custom web component for chat messages
-        ├── LeftMessage.js         # Left side chat message component
-        └── RightMessage.js        # Right side chat message component
+
+## How to run it locally
+
+### **1. Backend**
+
+From the root directory:
+
+```bash
+go mod download
+go run cmd/server/main.go
+
 ```
+
+The server starts on `http://localhost:8080`.
+
+### **2. Frontend**
+
+In a new terminal:
+
+```bash
+cd frontend
+npm install
+npm run dev
+
+```
+
+Open `http://localhost:3000` and you're good to go!

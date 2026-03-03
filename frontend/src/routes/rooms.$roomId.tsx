@@ -1,9 +1,11 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import MessageList from "@/components/MessageList";
 import RoomsSidebar from "@/components/RoomsSidebar";
+import useAuthStore from "@/stores/authStore";
 import useMessagesStore from "@/stores/messagesStore";
 import useRoomStore from "@/stores/roomStore";
+import { useSocketStore } from "@/stores/socketStore";
 import useToastStore from "@/stores/toastStore";
 
 export const Route = createFileRoute("/rooms/$roomId")({
@@ -34,12 +36,31 @@ export const Route = createFileRoute("/rooms/$roomId")({
 
 		return null;
 	},
+
+	staleTime: 30,
+	gcTime: 1000 * 60 * 5,
 });
 
 function RoomComponent() {
 	const navigate = useNavigate();
 	const { roomId } = Route.useParams();
+	const userId = useAuthStore((s) => s.user?.id);
 	const [message, setMessage] = useState("");
+
+	const connect = useSocketStore((s) => s.connect);
+	const disconnect = useSocketStore((s) => s.disconnect);
+
+	useEffect(() => {
+		if (!userId || !roomId) return;
+
+		connect(
+			`ws://${import.meta.env.VITE_WS_URL}/ws?room=${roomId}&user=${userId}`,
+		);
+
+		return () => {
+			disconnect();
+		};
+	}, [connect, disconnect, roomId, userId]);
 
 	const room = useRoomStore((s) => s.room);
 	const leave = useRoomStore((s) => s.leave);

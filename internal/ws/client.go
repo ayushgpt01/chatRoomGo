@@ -16,7 +16,28 @@ type Client struct {
 	send   chan models.ChatEvent
 }
 
+type connectedEvent struct {
+}
+
+func (e *connectedEvent) Type() string {
+	return "connected"
+}
+
+func (e *connectedEvent) Payload() any {
+	return nil
+}
+
 func (c *Client) readPump(hub *Hub, chatService *event.EventService) {
+	c.conn.SetReadLimit(512 * 1024)
+	c.conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+
+	c.conn.SetPongHandler(func(string) error {
+		c.conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+		return nil
+	})
+
+	c.send <- &connectedEvent{}
+
 	defer func() {
 		hub.UnregisterClient(c.roomID, c)
 		c.conn.Close()
@@ -60,12 +81,7 @@ func (c *Client) writePump() {
 				return
 			}
 
-			type OutgoingEvent struct {
-				Type    string `json:"type"`
-				Payload any    `json:"payload"`
-			}
-
-			c.conn.WriteJSON(OutgoingEvent{
+			c.conn.WriteJSON(models.OutgoingEvent{
 				Type:    evt.Type(),
 				Payload: evt.Payload(),
 			})

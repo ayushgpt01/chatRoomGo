@@ -47,11 +47,10 @@ func (srv *RoomService) HandleJoinRoom(ctx context.Context, payload JoinRoomPayl
 		return JoinRoomResponse{}, fmt.Errorf("join room: %w", err)
 	}
 
-	srv.hub.Broadcast(room.Id, &models.BaseEvent{
-		EventType: models.EventUserJoinedRoom,
-		Data: map[string]any{
-			"roomId": room.Id,
-			"userId": targetUserId,
+	srv.hub.Broadcast(room.Id, &models.UserJoinedRoomEvent{
+		Data: models.UserJoinedRoomPayload{
+			RoomID: room.Id,
+			UserID: targetUserId,
 		},
 	})
 
@@ -75,11 +74,10 @@ func (srv *RoomService) HandleLeaveRoom(ctx context.Context, payload LeaveRoomPa
 		return fmt.Errorf("handle leave room: %w", err)
 	}
 
-	srv.hub.Broadcast(payload.Id, &models.BaseEvent{
-		EventType: models.EventUserLeftRoom,
-		Data: map[string]any{
-			"roomId": payload.Id,
-			"userId": payload.UserId,
+	srv.hub.Broadcast(payload.Id, &models.UserLeftRoomEvent{
+		Data: models.UserLeftRoomPayload{
+			RoomID: payload.Id,
+			UserID: payload.UserId,
 		},
 	})
 

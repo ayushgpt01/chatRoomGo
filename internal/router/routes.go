@@ -9,6 +9,7 @@ import (
 	"github.com/ayushgpt01/chatRoomGo/internal/message"
 	"github.com/ayushgpt01/chatRoomGo/internal/room"
 	"github.com/ayushgpt01/chatRoomGo/internal/ws"
+	"github.com/rs/cors"
 )
 
 func metricsMiddleware(next http.Handler) http.Handler {
@@ -45,5 +46,13 @@ func HandleRoutes(wsHandler *ws.Wshandler, authService *auth.AuthService, roomSe
 	handler = recoverMiddleware(handler)
 	handler = metricsMiddleware(handler)
 
-	return handler
+	c := cors.New(cors.Options{
+		AllowedOrigins:   []string{"http://localhost:3000"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Authorization", "Content-Type"},
+		AllowCredentials: true,
+		Debug:            false,
+	})
+
+	return c.Handler(handler)
 }

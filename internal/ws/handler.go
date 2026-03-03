@@ -4,7 +4,6 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/ayushgpt01/chatRoomGo/internal/auth"
 	"github.com/ayushgpt01/chatRoomGo/internal/event"
 	"github.com/ayushgpt01/chatRoomGo/internal/models"
 	"github.com/gorilla/websocket"
@@ -30,9 +29,12 @@ var upgrader = websocket.Upgrader{
 
 func (h *Wshandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	roomIdStr := r.URL.Query().Get("room")
-	userID, ok := r.Context().Value(auth.UserIDKey).(models.UserId)
-	if !ok || userID == 0 {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+	userIdStr := r.URL.Query().Get("user")
+	log.Printf("Web socket user %s - room %s", userIdStr, roomIdStr)
+
+	userID, err := models.ParseUserId(userIdStr)
+	if err != nil {
+		http.Error(w, "room and user required", http.StatusBadRequest)
 		return
 	}
 

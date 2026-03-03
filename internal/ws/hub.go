@@ -23,7 +23,7 @@ func NewHub(ctx context.Context) *Hub {
 	}
 }
 
-func (hub *Hub) AddRoom(roomId models.RoomId) models.RoomId {
+func (hub *Hub) AddRoom(roomId models.RoomId) *Room {
 	roomCtx, roomCancel := context.WithCancel(hub.ctx)
 
 	room := &Room{
@@ -42,7 +42,7 @@ func (hub *Hub) AddRoom(roomId models.RoomId) models.RoomId {
 
 	go room.Run()
 
-	return roomId
+	return room
 }
 
 func (hub *Hub) DeleteRoom(id models.RoomId) error {
@@ -83,7 +83,7 @@ func (hub *Hub) RegisterClient(roomId models.RoomId, client *Client) error {
 	hub.mu.RUnlock()
 
 	if room == nil {
-		return fmt.Errorf("No room found with id %d", roomId)
+		room = hub.AddRoom(roomId)
 	}
 
 	room.register <- client

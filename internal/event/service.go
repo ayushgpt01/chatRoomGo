@@ -108,11 +108,10 @@ func (srv *EventService) handleJoinRoom(
 	userID models.UserId,
 	_ models.IncomingEvent,
 ) (models.ChatEvent, error) {
-	return &models.BaseEvent{
-		EventType: models.EventUserJoinedRoom,
-		Data: map[string]any{
-			"roomId": roomID,
-			"userId": userID,
+	return &models.UserJoinedRoomEvent{
+		Data: models.UserJoinedRoomPayload{
+			RoomID: roomID,
+			UserID: userID,
 		},
 	}, nil
 }
@@ -123,11 +122,10 @@ func (srv *EventService) handleLeaveRoom(
 	userID models.UserId,
 	_ models.IncomingEvent,
 ) (models.ChatEvent, error) {
-	return &models.BaseEvent{
-		EventType: models.EventUserLeftRoom,
-		Data: map[string]any{
-			"roomId": roomID,
-			"userId": userID,
+	return &models.UserLeftRoomEvent{
+		Data: models.UserLeftRoomPayload{
+			RoomID: roomID,
+			UserID: userID,
 		},
 	}, nil
 }
@@ -167,9 +165,10 @@ func (srv *EventService) handleSendMessage(
 
 	msg.Nonce = &payload.Nonce
 
-	return &models.BaseEvent{
-		EventType: models.EventMessageCreated,
-		Data:      msg,
+	return &models.MessageCreatedEvent{
+		Data: models.MessageCreatedPayload{
+			Message: msg,
+		},
 	}, nil
 }
 
@@ -222,9 +221,10 @@ func (srv *EventService) handleEditMessage(
 		return nil, fmt.Errorf("edit ws get response message: %w", err)
 	}
 
-	return &models.BaseEvent{
-		EventType: models.EventMessageUpdated,
-		Data:      updatedMsg,
+	return &models.MessageUpdatedEvent{
+		Data: models.MessageUpdatedPayload{
+			Message: updatedMsg,
+		},
 	}, nil
 }
 
@@ -267,11 +267,10 @@ func (srv *EventService) handleDeleteMessage(
 		return nil, fmt.Errorf("delete ws delete message=%d: %w", payload.MessageID, err)
 	}
 
-	return &models.BaseEvent{
-		EventType: models.EventMessageDeleted,
-		Data: map[string]any{
-			"messageId": payload.MessageID,
-			"roomId":    roomID,
+	return &models.MessageDeletedEvent{
+		Data: models.MessageDeletedPayload{
+			MessageID: payload.MessageID,
+			RoomID:    roomID,
 		},
 	}, nil
 }

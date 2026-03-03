@@ -1,204 +1,73 @@
-Welcome to your new TanStack Start app! 
+# ChatRoom Frontend
 
-# Getting Started
+A modern, type-safe React web application for real-time chatting. Built with **Vite**, **React 19**, and the **TanStack** ecosystem.
 
-To run this application:
+## Tech Stack
 
+- **Framework**: [React 19](https://react.dev/)
+- **Routing**: [TanStack Router](https://tanstack.com/router) (File-based, type-safe routing)
+- **State Management**: 
+  - Server State: [TanStack Query v5](https://tanstack.com/query)
+  - Client State: [Zustand](https://github.com/pmndrs/zustand)
+- **Styling**: [Tailwind CSS v4](https://tailwindcss.com/) & [DaisyUI](https://daisyui.com/)
+- **Validation**: [Zod](https://zod.dev/) (Schema-based validation for API responses)
+- **Tooling**: [Biome](https://biomejs.dev/) (Fast linting and formatting)
+
+## Architecture
+
+The application follows a modular structure focused on type safety and separation of concerns:
+
+- **`/src/routes`**: Contains the file-based route definitions.
+- **`/src/services`**: API abstraction layer using Axios.
+- **`/src/stores`**: Global client-side state (Auth, Socket, Toasts).
+- **`/src/integrations`**: Configuration for external libraries like Axios and TanStack Query.
+- **`/src/types`**: Centralized TypeScript interfaces and Zod schemas.
+
+
+## Getting Started
+
+### Prerequisites
+- Node.js (Latest LTS recommended)
+- The Go Backend running on `http://localhost:8080`
+
+### Installation
+1. Navigate to the frontend directory:
+   ```bash
+   cd frontend
+
+```
+
+2. Install dependencies:
 ```bash
 npm install
+
+```
+
+
+3. Start the development server:
+```bash
 npm run dev
-```
 
-# Building For Production
-
-To build this application for production:
-
-```bash
-npm run build
-```
-
-## Testing
-
-This project uses [Vitest](https://vitest.dev/) for testing. You can run the tests with:
-
-```bash
-npm run test
-```
-
-## Styling
-
-This project uses [Tailwind CSS](https://tailwindcss.com/) for styling.
-
-### Removing Tailwind CSS
-
-If you prefer not to use Tailwind CSS:
-
-1. Remove the demo pages in `src/routes/demo/`
-2. Replace the Tailwind import in `src/styles.css` with your own styles
-3. Remove `tailwindcss()` from the plugins array in `vite.config.ts`
-4. Uninstall the packages: `npm install @tailwindcss/vite tailwindcss -D`
-
-## Linting & Formatting
-
-This project uses [Biome](https://biomejs.dev/) for linting and formatting. The following scripts are available:
-
-
-```bash
-npm run lint
-npm run format
-npm run check
 ```
 
 
+The app will be available at `http://localhost:3000`.
 
-## Routing
+## Available Scripts
 
-This project uses [TanStack Router](https://tanstack.com/router) with file-based routing. Routes are managed as files in `src/routes`.
+* `npm run dev`: Starts the Vite development server.
+* `npm run build`: Compiles the application for production.
+* `npm run check`: Runs Biome linting and formatting checks.
+* `npm run test`: Executes unit tests via Vitest.
 
-### Adding A Route
+## Authentication Flow
 
-To add a new route to your application just add a new file in the `./src/routes` directory.
+The app uses a hybrid approach:
 
-TanStack will automatically generate the content of the route file for you.
+1. **Zustand (`authStore`)**: Manages the local user session and tokens.
+2. **Axios Interceptor**: Automatically attaches JWT tokens to outgoing requests.
+3. **Zod Validation**: All user data returned from the `/auth` endpoints is validated at runtime to prevent malformed data from crashing the UI.
 
-Now that you have two routes you can use a `Link` component to navigate between them.
+## Real-time Communication
 
-### Adding Links
-
-To use SPA (Single Page Application) navigation you will need to import the `Link` component from `@tanstack/react-router`.
-
-```tsx
-import { Link } from "@tanstack/react-router";
-```
-
-Then anywhere in your JSX you can use it like so:
-
-```tsx
-<Link to="/about">About</Link>
-```
-
-This will create a link that will navigate to the `/about` route.
-
-More information on the `Link` component can be found in the [Link documentation](https://tanstack.com/router/v1/docs/framework/react/api/router/linkComponent).
-
-### Using A Layout
-
-In the File Based Routing setup the layout is located in `src/routes/__root.tsx`. Anything you add to the root route will appear in all the routes. The route content will appear in the JSX where you render `{children}` in the `shellComponent`.
-
-Here is an example layout that includes a header:
-
-```tsx
-import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
-
-export const Route = createRootRoute({
-  head: () => ({
-    meta: [
-      { charSet: 'utf-8' },
-      { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { title: 'My App' },
-    ],
-  }),
-  shellComponent: ({ children }) => (
-    <html lang="en">
-      <head>
-        <HeadContent />
-      </head>
-      <body>
-        <header>
-          <nav>
-            <Link to="/">Home</Link>
-            <Link to="/about">About</Link>
-          </nav>
-        </header>
-        {children}
-        <Scripts />
-      </body>
-    </html>
-  ),
-})
-```
-
-More information on layouts can be found in the [Layouts documentation](https://tanstack.com/router/latest/docs/framework/react/guide/routing-concepts#layouts).
-
-## Server Functions
-
-TanStack Start provides server functions that allow you to write server-side code that seamlessly integrates with your client components.
-
-```tsx
-import { createServerFn } from '@tanstack/react-start'
-
-const getServerTime = createServerFn({
-  method: 'GET',
-}).handler(async () => {
-  return new Date().toISOString()
-})
-
-// Use in a component
-function MyComponent() {
-  const [time, setTime] = useState('')
-  
-  useEffect(() => {
-    getServerTime().then(setTime)
-  }, [])
-  
-  return <div>Server time: {time}</div>
-}
-```
-
-## API Routes
-
-You can create API routes by using the `server` property in your route definitions:
-
-```tsx
-import { createFileRoute } from '@tanstack/react-router'
-import { json } from '@tanstack/react-start'
-
-export const Route = createFileRoute('/api/hello')({
-  server: {
-    handlers: {
-      GET: () => json({ message: 'Hello, World!' }),
-    },
-  },
-})
-```
-
-## Data Fetching
-
-There are multiple ways to fetch data in your application. You can use TanStack Query to fetch data from a server. But you can also use the `loader` functionality built into TanStack Router to load the data for a route before it's rendered.
-
-For example:
-
-```tsx
-import { createFileRoute } from '@tanstack/react-router'
-
-export const Route = createFileRoute('/people')({
-  loader: async () => {
-    const response = await fetch('https://swapi.dev/api/people')
-    return response.json()
-  },
-  component: PeopleComponent,
-})
-
-function PeopleComponent() {
-  const data = Route.useLoaderData()
-  return (
-    <ul>
-      {data.results.map((person) => (
-        <li key={person.name}>{person.name}</li>
-      ))}
-    </ul>
-  )
-}
-```
-
-Loaders simplify your data fetching logic dramatically. Check out more information in the [Loader documentation](https://tanstack.com/router/latest/docs/framework/react/guide/data-loading#loader-parameters).
-
-# Demo files
-
-Files prefixed with `demo` can be safely deleted. They are there to provide a starting point for you to play around with the features you've installed.
-
-# Learn More
-
-You can learn more about all of the offerings from TanStack in the [TanStack documentation](https://tanstack.com).
-
-For TanStack Start specific documentation, visit [TanStack Start](https://tanstack.com/start).
+WebSocket connections are managed through a dedicated `socketStore`. This allows the UI to remain reactive to incoming `message` and `room` events regardless of which component the user is currently viewing.

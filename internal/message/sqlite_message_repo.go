@@ -15,7 +15,7 @@ type MessageStore interface {
 	Create(ctx context.Context, roomId models.RoomId, userId models.UserId, content string) (models.MessageId, error)
 	DeleteById(ctx context.Context, id models.MessageId) error
 	UpdateContent(ctx context.Context, id models.MessageId, content string) error
-	GetResponseById(ctx context.Context, id models.MessageId) (*ResponseMessage, error)
+	GetResponseById(ctx context.Context, id models.MessageId) (*models.ResponseMessage, error)
 	GetMessagesById(ctx context.Context, roomId models.RoomId, limit int, cursor *string) (*GetMessagesResponse, error)
 }
 
@@ -143,8 +143,8 @@ func (s *SQLiteMessageRepo) UpdateContent(ctx context.Context, id models.Message
 	return nil
 }
 
-func (s *SQLiteMessageRepo) GetResponseById(ctx context.Context, id models.MessageId) (*ResponseMessage, error) {
-	var message ResponseMessage
+func (s *SQLiteMessageRepo) GetResponseById(ctx context.Context, id models.MessageId) (*models.ResponseMessage, error) {
+	var message models.ResponseMessage
 
 	row := s.db.QueryRowContext(ctx, `SELECT m.id, m.content, m.updated_at, u.id, u.name, m.created_at, m.read
 	FROM messages m
@@ -194,9 +194,9 @@ func (s *SQLiteMessageRepo) GetMessagesById(ctx context.Context, roomId models.R
 
 	defer rows.Close()
 
-	messages := []ResponseMessage{}
+	messages := []models.ResponseMessage{}
 	for rows.Next() {
-		var msg ResponseMessage
+		var msg models.ResponseMessage
 		err := rows.Scan(
 			&msg.Id,
 			&msg.Content,

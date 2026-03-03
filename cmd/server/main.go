@@ -12,8 +12,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/rs/cors"
-
 	"github.com/ayushgpt01/chatRoomGo/internal/auth"
 	"github.com/ayushgpt01/chatRoomGo/internal/event"
 	"github.com/ayushgpt01/chatRoomGo/internal/message"
@@ -90,16 +88,6 @@ func main() {
 	messageService := message.NewMessageService(messageStore, roomMemberStore)
 	wsHandler := ws.NewWSHandler(hub, eventService)
 	handler := router.HandleRoutes(wsHandler, authService, roomService, messageService)
-
-	c := cors.New(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:3000"},
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Authorization", "Content-Type"},
-		AllowCredentials: true,
-		Debug:            false,
-	})
-
-	handler = c.Handler(handler)
 
 	httpServer := &http.Server{
 		Addr:    net.JoinHostPort(HOST, PORT),
