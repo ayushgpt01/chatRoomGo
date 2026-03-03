@@ -4,7 +4,7 @@ I built this project to explore how to handle real-time, concurrent connections 
 
 It’s a multi-room chat app where everything—from user accounts to message history—is persisted in a local SQLite database.
 
-## 💡 What’s interesting about this project?
+## What’s interesting about this project?
 
 ### **1. The Backend (Go)**
 

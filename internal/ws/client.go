@@ -36,8 +36,6 @@ func (c *Client) readPump(hub *Hub, chatService *event.EventService) {
 		return nil
 	})
 
-	c.send <- &connectedEvent{}
-
 	defer func() {
 		hub.UnregisterClient(c.roomID, c)
 		c.conn.Close()
