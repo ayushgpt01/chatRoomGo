@@ -29,7 +29,7 @@ const MAX_RECONNECT_DELAY = 30000;
 const messageQueue: string[] = [];
 const MAX_QUEUE_SIZE = 100;
 
-export const useSocketStore = create<SocketState>((set, get) => ({
+const useSocketStore = create<SocketState>((set, get) => ({
 	socket: null,
 	status: "closed",
 	error: null,
@@ -127,3 +127,5 @@ export const useSocketStore = create<SocketState>((set, get) => ({
 		};
 	},
 }));
+
+export default useSocketStore;

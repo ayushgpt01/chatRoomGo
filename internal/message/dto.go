@@ -15,3 +15,22 @@ type GetMessagesResponse struct {
 	Messages   []models.ResponseMessage `json:"messages"`
 	NextCursor *string                  `json:"nextCursor"`
 }
+
+type SendMessagePayload struct {
+	UserId  models.UserId
+	RoomId  models.RoomId
+	Content string
+}
+
+type EditMessagePayload struct {
+	UserId    models.UserId
+	MessageId models.MessageId
+	RoomId    models.RoomId
+	Content   string
+}
+
+type DeleteMessagePayload struct {
+	UserId    models.UserId
+	MessageId models.MessageId
+	RoomId    models.RoomId
+}

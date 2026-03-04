@@ -25,6 +25,14 @@ func ParseRoomId(id string) (RoomId, error) {
 
 type MessageId = int64
 
+func ParseMessageId(id string) (MessageId, error) {
+	messageId, err := strconv.ParseInt(id, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("invalid message id: %s - %w", id, err)
+	}
+	return messageId, nil
+}
+
 type Message struct {
 	Id        MessageId `db:"id"`
 	Content   string    `db:"content"`
@@ -66,7 +74,7 @@ type User struct {
 func ParseUserId(id string) (UserId, error) {
 	userId, err := strconv.ParseInt(id, 10, 64)
 	if err != nil {
-		return 0, fmt.Errorf("Invalid room id: %s - %s", id, err)
+		return 0, fmt.Errorf("Invalid user id: %s - %s", id, err)
 	}
 
 	return userId, nil

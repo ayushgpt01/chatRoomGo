@@ -151,7 +151,7 @@ func (s *SQLiteRoomMemberRepo) GetRoomsByUserId(ctx context.Context, userId mode
 		args = append(args, *cursor)
 	}
 
-	query += " ORDER BY r.id DESC LIMIT ?"
+	query += " ORDER BY r.id ASC LIMIT ?"
 	args = append(args, limit+1)
 
 	rows, err := s.db.QueryContext(ctx, query, args...)

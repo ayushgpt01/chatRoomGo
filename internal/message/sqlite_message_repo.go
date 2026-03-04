@@ -146,7 +146,7 @@ func (s *SQLiteMessageRepo) UpdateContent(ctx context.Context, id models.Message
 func (s *SQLiteMessageRepo) GetResponseById(ctx context.Context, id models.MessageId) (*models.ResponseMessage, error) {
 	var message models.ResponseMessage
 
-	row := s.db.QueryRowContext(ctx, `SELECT m.id, m.content, m.updated_at, u.id, u.name, m.created_at, m.read
+	row := s.db.QueryRowContext(ctx, `SELECT m.id, m.content, m.updated_at, u.id, u.name, m.created_at, m.read, m.room_id
 	FROM messages m
 	JOIN users u ON m.user_id = u.id
 	WHERE m.id = ?`, id)
@@ -159,6 +159,7 @@ func (s *SQLiteMessageRepo) GetResponseById(ctx context.Context, id models.Messa
 		&message.SenderName,
 		&message.SentAt,
 		&message.Read,
+		&message.RoomId,
 	)
 
 	if err != nil {
@@ -172,7 +173,7 @@ func (s *SQLiteMessageRepo) GetResponseById(ctx context.Context, id models.Messa
 }
 
 func (s *SQLiteMessageRepo) GetMessagesById(ctx context.Context, roomId models.RoomId, limit int, cursor *string) (*GetMessagesResponse, error) {
-	query := `SELECT m.id, m.content, m.updated_at, u.id, u.name, m.created_at, m.read
+	query := `SELECT m.id, m.content, m.updated_at, u.id, u.name, m.created_at, m.read, m.room_id
 	FROM messages m
 	JOIN users u ON m.user_id = u.id
 	WHERE m.room_id = ?`
@@ -205,6 +206,7 @@ func (s *SQLiteMessageRepo) GetMessagesById(ctx context.Context, roomId models.R
 			&msg.SenderName,
 			&msg.SentAt,
 			&msg.Read,
+			&msg.RoomId,
 		)
 
 		if err != nil {

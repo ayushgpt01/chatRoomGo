@@ -11,4 +11,5 @@ type ResponseMessage struct {
 	EditedAt   *time.Time `json:"editedAt"`
 	Read       bool       `json:"read"`
 	Nonce      *string    `json:"nonce,omitempty"`
+	RoomId     RoomId     `json:"roomId"`
 }

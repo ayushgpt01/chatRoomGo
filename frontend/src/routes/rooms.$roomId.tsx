@@ -1,11 +1,10 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import MessageList from "@/components/MessageList";
 import RoomsSidebar from "@/components/RoomsSidebar";
-import useAuthStore from "@/stores/authStore";
+import useSocketEvents from "@/hooks/useSocketEvents";
 import useMessagesStore from "@/stores/messagesStore";
 import useRoomStore from "@/stores/roomStore";
-import { useSocketStore } from "@/stores/socketStore";
 import useToastStore from "@/stores/toastStore";
 
 export const Route = createFileRoute("/rooms/$roomId")({
@@ -44,33 +43,14 @@ export const Route = createFileRoute("/rooms/$roomId")({
 function RoomComponent() {
 	const navigate = useNavigate();
 	const { roomId } = Route.useParams();
-	const userId = useAuthStore((s) => s.user?.id);
 	const [message, setMessage] = useState("");
 
-	const connect = useSocketStore((s) => s.connect);
-	const disconnect = useSocketStore((s) => s.disconnect);
-
-	useEffect(() => {
-		if (!userId || !roomId) return;
-
-		connect(
-			`ws://${import.meta.env.VITE_WS_URL}/ws?room=${roomId}&user=${userId}`,
-		);
-
-		return () => {
-			disconnect();
-		};
-	}, [connect, disconnect, roomId, userId]);
+	useSocketEvents(Number(roomId));
 
 	const room = useRoomStore((s) => s.room);
 	const leave = useRoomStore((s) => s.leave);
 	const isLeaving = useRoomStore((s) => s.isLeaving);
 	const showToast = useToastStore((s) => s.show);
-
-	const sendMessage = () => {
-		if (!message.trim()) return;
-		setMessage("");
-	};
 
 	const handleLeave = async () => {
 		try {
@@ -83,6 +63,15 @@ function RoomComponent() {
 			);
 			console.error(err);
 		}
+	};
+
+	const send = useMessagesStore((s) => s.sendMessage);
+
+	const sendMessage = async () => {
+		if (!message.trim()) return;
+
+		await send(Number(roomId), message.trim());
+		setMessage("");
 	};
 
 	return (

@@ -1,9 +1,11 @@
 package message
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/ayushgpt01/chatRoomGo/internal/auth"
 	"github.com/ayushgpt01/chatRoomGo/internal/models"
@@ -58,5 +60,138 @@ func HandleGetMessages(srv *MessageService) http.Handler {
 		if err != nil {
 			http.Error(w, "Server error", http.StatusInternalServerError)
 		}
+	})
+}
+
+type request struct {
+	Content string `json:"content"`
+}
+
+func (s request) Valid(ctx context.Context) map[string]string {
+	problems := map[string]string{}
+	if strings.TrimSpace(s.Content) == "" {
+		problems["content"] = "Content cannot be empty"
+	}
+	if len(s.Content) > 2000 {
+		problems["content"] = "Content too long"
+	}
+	return problems
+}
+
+func HandleSendMessage(srv *MessageService) http.Handler {
+	type S struct {
+		Content string `json:"content"`
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		roomId, err := models.ParseRoomId(r.PathValue("roomId"))
+		if err != nil {
+			http.Error(w, "Invalid room id", http.StatusBadRequest)
+			return
+		}
+
+		currentUserId, ok := r.Context().Value(auth.UserIDKey).(models.UserId)
+		if !ok {
+			http.Error(w, "Server error", http.StatusInternalServerError)
+			return
+		}
+
+		body, ok := utils.HandleDecode[request](w, r)
+		if !ok {
+			return
+		}
+
+		res, err := srv.HandleSendMessage(r.Context(), SendMessagePayload{
+			UserId:  currentUserId,
+			RoomId:  roomId,
+			Content: body.Content,
+		})
+
+		if err != nil {
+			utils.HandleServiceError(w, "POST /room/{roomId}/messages", err)
+			return
+		}
+
+		if err := utils.Encode(w, r, http.StatusCreated, res); err != nil {
+			http.Error(w, "Server error", http.StatusInternalServerError)
+		}
+	})
+}
+
+func HandleEditMessage(srv *MessageService) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		roomId, err := models.ParseRoomId(r.PathValue("roomId"))
+		if err != nil {
+			http.Error(w, "Invalid room id", http.StatusBadRequest)
+			return
+		}
+
+		messageId, err := models.ParseMessageId(r.PathValue("messageId"))
+		if err != nil {
+			http.Error(w, "Invalid message id", http.StatusBadRequest)
+			return
+		}
+
+		currentUserId, ok := r.Context().Value(auth.UserIDKey).(models.UserId)
+		if !ok {
+			http.Error(w, "Server error", http.StatusInternalServerError)
+			return
+		}
+
+		body, ok := utils.HandleDecode[request](w, r)
+		if !ok {
+			return
+		}
+
+		res, err := srv.HandleEditMessage(r.Context(), EditMessagePayload{
+			UserId:    currentUserId,
+			MessageId: messageId,
+			RoomId:    roomId,
+			Content:   body.Content,
+		})
+
+		if err != nil {
+			utils.HandleServiceError(w, "PATCH /rooms/{roomId}/messages/{id}", err)
+			return
+		}
+
+		if err := utils.Encode(w, r, http.StatusOK, res); err != nil {
+			http.Error(w, "Server error", http.StatusInternalServerError)
+		}
+	})
+}
+
+func HandleDeleteMessage(srv *MessageService) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		roomId, err := models.ParseRoomId(r.PathValue("roomId"))
+		if err != nil {
+			http.Error(w, "Invalid room id", http.StatusBadRequest)
+			return
+		}
+
+		messageId, err := models.ParseMessageId(r.PathValue("messageId"))
+		if err != nil {
+			http.Error(w, "Invalid message id", http.StatusBadRequest)
+			return
+		}
+
+		currentUserId, ok := r.Context().Value(auth.UserIDKey).(models.UserId)
+		if !ok {
+			http.Error(w, "Server error", http.StatusInternalServerError)
+			return
+		}
+
+		err = srv.HandleDeleteMessage(r.Context(), DeleteMessagePayload{
+			UserId:    currentUserId,
+			MessageId: messageId,
+			RoomId:    roomId,
+		})
+
+		if err != nil {
+			utils.HandleServiceError(w, "DELETE /messages/{id}", err)
+			return
+		}
+
+		w.WriteHeader(http.StatusNoContent)
 	})
 }
