@@ -11,10 +11,11 @@ import (
 type MessageService struct {
 	messageStore    MessageStore
 	roomMemberStore room.RoomMemberStore
+	hub             models.HubBroadcaster
 }
 
-func NewMessageService(messageStore MessageStore, roomMemberStore room.RoomMemberStore) *MessageService {
-	return &MessageService{messageStore, roomMemberStore}
+func NewMessageService(messageStore MessageStore, roomMemberStore room.RoomMemberStore, hub models.HubBroadcaster) *MessageService {
+	return &MessageService{messageStore, roomMemberStore, hub}
 }
 
 func (srv *MessageService) ensureMember(
@@ -71,6 +72,12 @@ func (srv *MessageService) HandleSendMessage(
 		return nil, fmt.Errorf("get response message id=%d: %w", id, err)
 	}
 
+	srv.hub.Broadcast(payload.RoomId, &models.MessageCreatedEvent{
+		Data: models.MessageCreatedPayload{
+			Message: res,
+		},
+	})
+
 	return res, nil
 }
 
@@ -102,6 +109,12 @@ func (srv *MessageService) HandleEditMessage(
 		return nil, fmt.Errorf("get response message id=%d: %w", payload.MessageId, err)
 	}
 
+	srv.hub.Broadcast(payload.RoomId, &models.MessageUpdatedEvent{
+		Data: models.MessageUpdatedPayload{
+			Message: res,
+		},
+	})
+
 	return res, nil
 }
 
@@ -126,6 +139,13 @@ func (srv *MessageService) HandleDeleteMessage(
 	if err != nil {
 		return fmt.Errorf("delete message id=%d: %w", payload.MessageId, err)
 	}
+
+	srv.hub.Broadcast(payload.RoomId, &models.MessageDeletedEvent{
+		Data: models.MessageDeletedPayload{
+			MessageID: payload.MessageId,
+			RoomID:    payload.RoomId,
+		},
+	})
 
 	return nil
 }
