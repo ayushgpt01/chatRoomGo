@@ -1,10 +1,5 @@
-import {
-	Check,
-	CheckCheck,
-	ChevronDown as ChevronDownIcon,
-	MoreVertical,
-} from "lucide-react";
-import { useCallback, useId, useRef, useState } from "react";
+import { Check, CheckCheck, MoreVertical } from "lucide-react";
+import { useId, useRef, useState } from "react";
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 import ReadReceiptsModal from "@/components/ReadReceiptsModal";
 import useAuthStore from "@/stores/authStore";
@@ -81,18 +76,20 @@ function MessageItem({
 		.slice(0, 2);
 
 	const formattedTime = formatChatTime(message.sentAt);
-	const showAvatar = !isConsecutive || !isMine;
+	const showAvatar = !isConsecutive;
 
 	return (
 		<article
-			className={`group px-6 py-1 ${isMine ? "chat-end" : "chat-start"} ${isConsecutive ? "mt-1" : "mt-4"} transition-all duration-200`}
+			className={`chat group px-6 py-1 ${isMine ? "chat-end" : "chat-start"}`}
 			aria-label={`${isMine ? "Your" : `${message.senderName}'s`} message${isEdited ? " (edited)" : ""}`}
 		>
 			{showAvatar && (
 				<div className="chat-image avatar avatar-placeholder">
 					<div
 						className={`w-10 rounded-full transition-transform duration-200 group-hover:scale-105 ${
-							isMine ? "bg-primary text-primary-content" : "bg-base-300"
+							isMine
+								? "bg-primary text-primary-content"
+								: "bg-secondary text-primary-content"
 						}`}
 					>
 						<span className="text-sm font-medium">{initials}</span>
@@ -101,27 +98,20 @@ function MessageItem({
 			)}
 
 			{/* Header */}
-			{!isConsecutive && (
-				<div className="chat-header pb-1">
-					{!isMine && (
-						<>
-							<span className="font-medium">{message.senderName}</span>
-							<time
-								className="text-xs opacity-50 ml-2"
-								dateTime={message.sentAt}
-							>
-								{formattedTime}
-							</time>
-						</>
-					)}
+			{!isConsecutive && !isMine && (
+				<div className="chat-header pb-1 text-sm opacity-80">
+					{message.senderName}
+					<time className="text-xs opacity-50 ml-2" dateTime={message.sentAt}>
+						{formattedTime}
+					</time>
 				</div>
 			)}
 
 			{/* Bubble */}
 			<div
 				className={`chat-bubble relative transition-all duration-200 group-hover:shadow-lg ${
-					isMine ? "chat-bubble-primary" : "bg-base-200 text-base-content"
-				} ${isConsecutive ? "rounded-2xl" : "rounded-3xl"}`}
+					isMine ? "chat-bubble-primary" : "chat-bubble-secondary"
+				} ${isConsecutive ? "rounded-2xl" : "rounded-3xl"} before:hidden after:hidden`}
 			>
 				{editingId === message.id ? (
 					<div className="flex items-center gap-2 w-full">
@@ -281,7 +271,6 @@ export default function MessageList({
 	const fetchMessages = useMessagesStore((s) => s.fetchMessages);
 	const { roomsList } = useRoomStore((s) => s);
 	const virtuosoRef = useRef<VirtuosoHandle>(null);
-	const [showScrollButton, setShowScrollButton] = useState(false);
 	const [isAtBottom, setIsAtBottom] = useState(true);
 	const [readReceiptsModal, setReadReceiptsModal] = useState<{
 		isOpen: boolean;
@@ -310,25 +299,15 @@ export default function MessageList({
 		});
 	};
 
-	// Scroll handlers
-	const scrollToBottom = useCallback(() => {
-		virtuosoRef.current?.scrollToIndex({ index: "LAST", behavior: "smooth" });
-	}, []);
-
-	const handleScroll = useCallback((isScrolling: boolean) => {
+	const handleScroll = (isScrolling: boolean) => {
 		if (!isScrolling) {
 			setIsAtBottom(true);
-			setShowScrollButton(false);
 		}
-	}, []);
+	};
 
-	const handleScrollToBottomChange = useCallback(
-		(atBottom: boolean) => {
-			setIsAtBottom(atBottom);
-			setShowScrollButton(!atBottom && messages.length > 0);
-		},
-		[messages.length],
-	);
+	const handleScrollToBottomChange = (atBottom: boolean) => {
+		setIsAtBottom(atBottom);
+	};
 
 	// Group messages and add date separators
 	const processedData = messages.reduce(
@@ -385,13 +364,12 @@ export default function MessageList({
 	}
 
 	return (
-		<div className="flex-1 relative">
+		<div className="h-full relative">
 			<Virtuoso
 				ref={virtuosoRef}
-				className="flex-1"
+				style={{ height: "100%" }}
 				data={processedData}
-				alignToBottom
-				followOutput="auto"
+				followOutput="smooth"
 				atBottomStateChange={handleScrollToBottomChange}
 				isScrolling={handleScroll}
 				startReached={() => {
@@ -404,8 +382,8 @@ export default function MessageList({
 				}}
 				itemContent={(index, item) => {
 					if (item === "separator") {
-						const msgIndex = index > 0 ? index - 1 : 0;
-						const msg = messages[msgIndex] || messages[0];
+						const nextItem = processedData[index + 1] as Message;
+						const msg = nextItem;
 						if (!msg) return null;
 
 						return (
@@ -441,19 +419,6 @@ export default function MessageList({
 				}}
 			/>
 
-			{/* Scroll to bottom button */}
-			{showScrollButton && (
-				<button
-					type="button"
-					onClick={scrollToBottom}
-					className="absolute bottom-20 right-4 btn btn-circle btn-primary shadow-lg transition-all duration-200 hover:scale-110"
-					aria-label="Scroll to bottom"
-				>
-					<ChevronDownIcon className="w-5 h-5" />
-				</button>
-			)}
-
-			{/* Unread indicator */}
 			{showUnreadIndicator && !isAtBottom && (
 				<div className="absolute top-0 left-0 right-0 bg-linear-to-b from-primary/20 to-transparent h-8 pointer-events-none" />
 			)}

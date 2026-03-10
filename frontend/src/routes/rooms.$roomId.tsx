@@ -1,5 +1,5 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Search, Users } from "lucide-react";
+import { ArrowLeft, Users } from "lucide-react";
 import { useState } from "react";
 import MessageList from "@/components/MessageList";
 import RoomsSidebar from "@/components/RoomsSidebar";
@@ -46,7 +46,6 @@ function RoomComponent() {
 	const navigate = useNavigate();
 	const { roomId } = Route.useParams();
 	const [message, setMessage] = useState("");
-	const [showSearch, setShowSearch] = useState(false);
 	const getTypingUsers = useTypingStore((s) => s.getTypingUsers);
 
 	useSocketEvents(Number(roomId));
@@ -85,7 +84,6 @@ function RoomComponent() {
 
 			{/* Chat Area */}
 			<div className="flex-1 flex flex-col">
-				{/* Enhanced Header */}
 				<div className="navbar h-16 bg-base-100 border-b px-4">
 					<div className="flex items-center gap-3 flex-1">
 						{/* Back Button */}
@@ -115,15 +113,6 @@ function RoomComponent() {
 						<div className="flex items-center gap-2">
 							<button
 								type="button"
-								className="btn btn-ghost btn-circle btn-sm"
-								onClick={() => setShowSearch(!showSearch)}
-								aria-label="Search messages"
-							>
-								<Search className="w-4 h-4" />
-							</button>
-
-							<button
-								type="button"
 								className="btn btn-sm btn-outline"
 								onClick={handleLeave}
 								disabled={isLeaving}
@@ -140,18 +129,6 @@ function RoomComponent() {
 						</div>
 					</div>
 				</div>
-
-				{/* Search Bar */}
-				{showSearch && (
-					<div className="bg-base-200 border-b px-4 py-2">
-						<input
-							type="text"
-							className="input input-sm input-bordered w-full"
-							placeholder="Search messages..."
-							// TODO: Implement search functionality
-						/>
-					</div>
-				)}
 
 				<MessageList
 					roomId={Number(roomId)}
