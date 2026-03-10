@@ -3,8 +3,8 @@ package seed
 import (
 	"context"
 	"database/sql"
-	"fmt"
 
+	"github.com/ayushgpt01/chatRoomGo/internal/logger"
 	"github.com/ayushgpt01/chatRoomGo/utils"
 )
 
@@ -18,10 +18,11 @@ func SeedChatData(ctx context.Context, db *sql.DB) error {
 	// Prevent duplicate seeding
 	var userCount int
 	if err := tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM users").Scan(&userCount); err != nil {
+		logger.Error("Failed to check existing users", "error", err)
 		return err
 	}
 	if userCount > 0 {
-		fmt.Println("Seed skipped: users already exist")
+		logger.Info("Seed skipped: users already exist")
 		return nil
 	}
 
@@ -83,6 +84,10 @@ func SeedChatData(ctx context.Context, db *sql.DB) error {
 		return err
 	}
 
-	fmt.Println("Seeded database")
+	logger.Info("Database seeded successfully",
+		"users_created", 2,
+		"rooms_created", 1,
+		"messages_created", 4,
+	)
 	return tx.Commit()
 }

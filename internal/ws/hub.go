@@ -3,9 +3,9 @@ package ws
 import (
 	"context"
 	"fmt"
-	"log"
 	"sync"
 
+	"github.com/ayushgpt01/chatRoomGo/internal/logger"
 	"github.com/ayushgpt01/chatRoomGo/internal/models"
 )
 
@@ -118,7 +118,7 @@ func (hub *Hub) Broadcast(roomId models.RoomId, evt models.ChatEvent) error {
 
 func (hub *Hub) Cleanup() {
 	<-hub.ctx.Done()
-	log.Printf("Cleaning up Hub...")
+	logger.Info("Cleaning up Hub...")
 	hub.mu.Lock()
 	defer hub.mu.Unlock()
 

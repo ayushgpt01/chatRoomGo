@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/ayushgpt01/chatRoomGo/internal/logger"
 	"github.com/ayushgpt01/chatRoomGo/utils"
 )
 
@@ -108,7 +109,21 @@ func HandleLogout(srv *AuthService) http.Handler {
 		}
 
 		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-			http.Error(w, "Invalid request", http.StatusBadRequest)
+			if err.Error() == "EOF" {
+				logger.Info("error_decoding_request",
+					"error", "Empty request body",
+					"err", err,
+					"content_length", r.ContentLength,
+				)
+				http.Error(w, "Request body is required", http.StatusBadRequest)
+			} else {
+				logger.Info("error_decoding_request",
+					"error", "Invalid JSON format",
+					"err", err,
+					"content_length", r.ContentLength,
+				)
+				http.Error(w, "Invalid request format", http.StatusBadRequest)
+			}
 			return
 		}
 

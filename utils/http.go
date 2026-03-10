@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 
+	"github.com/ayushgpt01/chatRoomGo/internal/logger"
 	"github.com/ayushgpt01/chatRoomGo/internal/models"
 )
 
@@ -63,7 +63,26 @@ func HandleDecode[T Validator](w http.ResponseWriter, r *http.Request) (T, bool)
 }
 
 func HandleServiceError(w http.ResponseWriter, path string, err error) {
-	log.Printf("%s - %v\n", path, err)
+	logger.Error("Service error occurred",
+		"path", path,
+		"error", err.Error(),
+		"error_type", func() string {
+			switch {
+			case errors.Is(err, models.ErrInvalidInput):
+				return "invalid_input"
+			case errors.Is(err, models.ErrUnauthorized):
+				return "unauthorized"
+			case errors.Is(err, models.ErrForbidden):
+				return "forbidden"
+			case errors.Is(err, models.ErrNotFound):
+				return "not_found"
+			case errors.Is(err, models.ErrConflict):
+				return "conflict"
+			default:
+				return "internal_server_error"
+			}
+		}(),
+	)
 
 	switch {
 	case errors.Is(err, models.ErrInvalidInput):

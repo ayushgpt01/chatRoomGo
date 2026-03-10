@@ -3,14 +3,13 @@ package main
 import (
 	"context"
 	"database/sql"
-	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"time"
 
 	"github.com/ayushgpt01/chatRoomGo/internal/auth"
 	"github.com/ayushgpt01/chatRoomGo/internal/event"
+	"github.com/ayushgpt01/chatRoomGo/internal/logger"
 	"github.com/ayushgpt01/chatRoomGo/internal/message"
 	"github.com/ayushgpt01/chatRoomGo/internal/room"
 	"github.com/ayushgpt01/chatRoomGo/internal/router"
@@ -22,42 +21,42 @@ import (
 func handlerInit(ctx context.Context, db *sql.DB) http.Handler {
 	userStore, err := user.NewSqliteUserRepo(ctx, db)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error initialising user repo: %s\n", err)
+		logger.Error("Failed to initialize user repo", "error", err)
 		os.Exit(1)
 	}
 
-	log.Printf("Initialised User Repo\n")
+	logger.Info("Initialized User Repo")
 
 	roomStore, err := room.NewSQLiteRoomRepo(ctx, db)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error initialising room repo: %s\n", err)
+		logger.Error("Failed to initialize room repo", "error", err)
 		os.Exit(1)
 	}
-	log.Printf("Initialised Room Repo\n")
+	logger.Info("Initialized Room Repo")
 
 	messageStore, err := message.NewSQLiteMessageRepo(ctx, db)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error initialising message repo: %s\n", err)
+		logger.Error("Failed to initialize message repo", "error", err)
 		os.Exit(1)
 	}
-	log.Printf("Initialised Message Repo\n")
+	logger.Info("Initialized Message Repo")
 
 	roomMemberStore, err := room.NewSQLiteRoomMemberRepo(ctx, db)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error initialising room member repo: %s\n", err)
+		logger.Error("Failed to initialize room member repo", "error", err)
 		os.Exit(1)
 	}
-	log.Printf("Initialised Room member Repo\n")
+	logger.Info("Initialized Room member Repo")
 
 	authStore, err := auth.NewSQLiteAuthRepo(ctx, db)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error initialising auth repo: %s\n", err)
+		logger.Error("Failed to initialize auth repo", "error", err)
 		os.Exit(1)
 	}
-	log.Printf("Initialised Auth Repo\n")
+	logger.Info("Initialized Auth Repo")
 
 	if err := seed.SeedChatData(context.Background(), db); err != nil {
-		log.Fatal(err)
+		logger.Error("Failed to seed chat data", "error", err)
 	}
 
 	hub := ws.NewHub(ctx)

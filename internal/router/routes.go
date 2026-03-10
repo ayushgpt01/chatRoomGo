@@ -1,32 +1,26 @@
 package router
 
 import (
-	"log"
 	"net/http"
-	"time"
 
 	"github.com/ayushgpt01/chatRoomGo/internal/auth"
+	"github.com/ayushgpt01/chatRoomGo/internal/logger"
 	"github.com/ayushgpt01/chatRoomGo/internal/message"
+	"github.com/ayushgpt01/chatRoomGo/internal/middleware"
 	"github.com/ayushgpt01/chatRoomGo/internal/room"
 	"github.com/ayushgpt01/chatRoomGo/internal/ws"
 	"github.com/rs/cors"
 )
 
-func metricsMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("Recieved Request from URL %s\n", r.URL.Path)
-		t1 := time.Now()
-		next.ServeHTTP(w, r)
-		t2 := time.Now()
-		log.Printf("Took %v time to respond to URL %s\n", t2.Sub(t1), r.URL.Path)
-	})
-}
-
 func recoverMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
-			if r := recover(); r != nil {
-				log.Printf("Recovered in f %v\n", r)
+			if rec := recover(); rec != nil {
+				logger.Error("Panic recovered in HTTP handler",
+					"panic", rec,
+					"method", r.Method,
+					"path", r.URL.Path,
+				)
 			}
 		}()
 		next.ServeHTTP(w, r)
@@ -34,7 +28,7 @@ func recoverMiddleware(next http.Handler) http.Handler {
 }
 
 func HandleRoutes(wsHandler *ws.Wshandler, authService *auth.AuthService, roomService *room.RoomService, messageService *message.MessageService) http.Handler {
-	log.Printf("Setting up routes...")
+	logger.Info("Setting up routes...")
 
 	mux := http.NewServeMux()
 
@@ -43,8 +37,9 @@ func HandleRoutes(wsHandler *ws.Wshandler, authService *auth.AuthService, roomSe
 	mux.Handle("/ws", wsHandler)
 
 	var handler http.Handler = mux
+	handler = middleware.RequestIDMiddleware(handler)
 	handler = recoverMiddleware(handler)
-	handler = metricsMiddleware(handler)
+	handler = middleware.LoggingMiddleware(handler)
 
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:3000"},

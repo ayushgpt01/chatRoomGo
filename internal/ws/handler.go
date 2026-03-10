@@ -1,10 +1,10 @@
 package ws
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/ayushgpt01/chatRoomGo/internal/event"
+	"github.com/ayushgpt01/chatRoomGo/internal/logger"
 	"github.com/ayushgpt01/chatRoomGo/internal/models"
 	"github.com/gorilla/websocket"
 )
@@ -30,16 +30,34 @@ var upgrader = websocket.Upgrader{
 func (h *Wshandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	roomIdStr := r.URL.Query().Get("room")
 	userIdStr := r.URL.Query().Get("user")
-	log.Printf("Web socket user %s - room %s", userIdStr, roomIdStr)
+	remoteAddr := r.RemoteAddr
+	userAgent := r.UserAgent()
+
+	logger.Info("websocket_connection_attempt",
+		"room_id", roomIdStr,
+		"user_id", userIdStr,
+		"remote_addr", remoteAddr,
+		"user_agent", userAgent,
+	)
 
 	userID, err := models.ParseUserId(userIdStr)
 	if err != nil {
+		logger.Warn("websocket_invalid_user_id",
+			"user_id_str", userIdStr,
+			"error", err.Error(),
+			"remote_addr", remoteAddr,
+		)
 		http.Error(w, "room and user required", http.StatusBadRequest)
 		return
 	}
 
 	roomId, err := models.ParseRoomId(roomIdStr)
 	if err != nil {
+		logger.Warn("websocket_invalid_room_id",
+			"room_id_str", roomIdStr,
+			"error", err.Error(),
+			"remote_addr", remoteAddr,
+		)
 		http.Error(w, "room and user required", http.StatusBadRequest)
 		return
 	}
@@ -47,9 +65,20 @@ func (h *Wshandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// upgrade
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Println("upgrade error:", err)
+		logger.Error("websocket_upgrade_failed",
+			"error", err.Error(),
+			"user_id", userID,
+			"room_id", roomId,
+			"remote_addr", remoteAddr,
+		)
 		return
 	}
+
+	logger.Info("websocket_connection_established",
+		"user_id", userID,
+		"room_id", roomId,
+		"remote_addr", remoteAddr,
+	)
 
 	defer ws.Close()
 
@@ -64,9 +93,19 @@ func (h *Wshandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// register client in room
 	err = h.hub.RegisterClient(roomId, &client)
 	if err != nil {
-		log.Println("register client error:", err)
+		logger.Error("websocket_register_client_failed",
+			"error", err.Error(),
+			"user_id", userID,
+			"room_id", roomId,
+		)
+		ws.Close()
 		return
 	}
+
+	logger.Info("websocket_client_registered",
+		"user_id", userID,
+		"room_id", roomId,
+	)
 
 	// start pumps
 	go client.writePump()
