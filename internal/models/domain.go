@@ -40,6 +40,7 @@ type Message struct {
 	RoomId    RoomId    `db:"room_id"`
 	CreatedAt time.Time `db:"created_at"`
 	UpdatedAt time.Time `db:"updated_at"`
+	Delivered bool      `db:"delivered"`
 }
 
 type UserId = int64

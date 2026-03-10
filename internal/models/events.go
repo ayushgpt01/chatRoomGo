@@ -33,14 +33,18 @@ const (
 	EventLeaveRoom     IncomingEventType = "room.leave"
 	EventEditMessage   IncomingEventType = "message.edit"
 	EventDeleteMessage IncomingEventType = "message.delete"
+	EventStartTyping   IncomingEventType = "typing.start"
+	EventStopTyping    IncomingEventType = "typing.stop"
 )
 
 const (
-	EventMessageCreated OutgoingEventType = "message_created"
-	EventMessageUpdated OutgoingEventType = "message_updated"
-	EventMessageDeleted OutgoingEventType = "message_deleted"
-	EventUserJoinedRoom OutgoingEventType = "user_joined_room"
-	EventUserLeftRoom   OutgoingEventType = "user_left_room"
+	EventMessageCreated    OutgoingEventType = "message_created"
+	EventMessageUpdated    OutgoingEventType = "message_updated"
+	EventMessageDeleted    OutgoingEventType = "message_deleted"
+	EventUserJoinedRoom    OutgoingEventType = "user_joined_room"
+	EventUserLeftRoom      OutgoingEventType = "user_left_room"
+	EventUserStartedTyping OutgoingEventType = "user_started_typing"
+	EventUserStoppedTyping OutgoingEventType = "user_stopped_typing"
 
 	EventError OutgoingEventType = "error"
 )
@@ -148,5 +152,42 @@ func (e *ErrorEvent) Type() string {
 }
 
 func (e *ErrorEvent) Payload() any {
+	return e.Data
+}
+
+// EventUserStartedTyping - "user_started_typing"
+type UserStartedTypingPayload struct {
+	RoomId   RoomId `json:"roomId"`
+	UserId   UserId `json:"userId"`
+	UserName string `json:"userName"`
+}
+
+type UserStartedTypingEvent struct {
+	Data UserStartedTypingPayload
+}
+
+func (e *UserStartedTypingEvent) Type() string {
+	return string(EventUserStartedTyping)
+}
+
+func (e *UserStartedTypingEvent) Payload() any {
+	return e.Data
+}
+
+// EventUserStoppedTyping - "user_stopped_typing"
+type UserStoppedTypingPayload struct {
+	RoomId RoomId `json:"roomId"`
+	UserId UserId `json:"userId"`
+}
+
+type UserStoppedTypingEvent struct {
+	Data UserStoppedTypingPayload
+}
+
+func (e *UserStoppedTypingEvent) Type() string {
+	return string(EventUserStoppedTyping)
+}
+
+func (e *UserStoppedTypingEvent) Payload() any {
 	return e.Data
 }

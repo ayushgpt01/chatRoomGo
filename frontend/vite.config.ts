@@ -20,6 +20,9 @@ const config = defineConfig({
 			},
 		}),
 	],
+	server: {
+		open: true,
+	},
 });
 
 export default config;

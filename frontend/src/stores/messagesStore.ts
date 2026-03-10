@@ -73,8 +73,8 @@ const useMessagesStore = create<MessagesState>()((set, get) => ({
 					...state.messagesPerRoom,
 					[roomId]: {
 						messages: [
-							...messages,
 							...(state.messagesPerRoom[roomId]?.messages ?? []),
+							...messages,
 						],
 						cursor: nextCursor,
 						hasMore: nextCursor !== null,
@@ -100,9 +100,10 @@ const useMessagesStore = create<MessagesState>()((set, get) => ({
 			senderId: user.id,
 			senderName: user.username,
 			sentAt: new Date().toISOString(),
-			read: false,
 			editedAt: null,
 			nonce,
+			delivered: false,
+			readBy: [],
 		};
 
 		// optimistic insert

@@ -149,3 +149,39 @@ func (srv *MessageService) HandleDeleteMessage(
 
 	return nil
 }
+
+func (srv *MessageService) HandleMarkAsRead(
+	ctx context.Context,
+	messageId models.MessageId,
+	userId models.UserId,
+) error {
+	msg, err := srv.messageStore.GetById(ctx, messageId)
+	if err != nil {
+		return fmt.Errorf("get message for read receipt id=%d: %w", messageId, err)
+	}
+
+	exists, err := srv.ensureMember(ctx, msg.RoomId, userId)
+	if err != nil {
+		return fmt.Errorf("check membership for read receipt: %w", err)
+	}
+	if !exists {
+		return models.ErrUnauthorized
+	}
+
+	if err := srv.roomMemberStore.UpdateLastMessageRead(ctx, msg.RoomId, userId, messageId); err != nil {
+		return fmt.Errorf("update last message read: %w", err)
+	}
+
+	return nil
+}
+
+func (srv *MessageService) HandleMarkAsDelivered(
+	ctx context.Context,
+	messageId models.MessageId,
+) error {
+	if err := srv.messageStore.MarkAsDelivered(ctx, messageId); err != nil {
+		return fmt.Errorf("mark message as delivered id=%d: %w", messageId, err)
+	}
+
+	return nil
+}

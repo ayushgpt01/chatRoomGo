@@ -48,6 +48,8 @@ func NewEventService(
 	srv.handlers[models.EventSendMessage] = srv.handleSendMessage
 	srv.handlers[models.EventEditMessage] = srv.handleEditMessage
 	srv.handlers[models.EventDeleteMessage] = srv.handleDeleteMessage
+	srv.handlers[models.EventStartTyping] = srv.handleStartTyping
+	srv.handlers[models.EventStopTyping] = srv.handleStopTyping
 
 	return srv
 }
@@ -271,6 +273,41 @@ func (srv *EventService) handleDeleteMessage(
 		Data: models.MessageDeletedPayload{
 			MessageID: payload.MessageID,
 			RoomID:    roomID,
+		},
+	}, nil
+}
+
+func (srv *EventService) handleStartTyping(
+	ctx context.Context,
+	roomID models.RoomId,
+	userID models.UserId,
+	_ models.IncomingEvent,
+) (models.ChatEvent, error) {
+	// Get user info for the typing event
+	user, err := srv.userStore.GetById(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("ws get user for typing: %w", err)
+	}
+
+	return &models.UserStartedTypingEvent{
+		Data: models.UserStartedTypingPayload{
+			RoomId:   roomID,
+			UserId:   userID,
+			UserName: user.Name,
+		},
+	}, nil
+}
+
+func (srv *EventService) handleStopTyping(
+	ctx context.Context,
+	roomID models.RoomId,
+	userID models.UserId,
+	_ models.IncomingEvent,
+) (models.ChatEvent, error) {
+	return &models.UserStoppedTypingEvent{
+		Data: models.UserStoppedTypingPayload{
+			RoomId: roomID,
+			UserId: userID,
 		},
 	}, nil
 }

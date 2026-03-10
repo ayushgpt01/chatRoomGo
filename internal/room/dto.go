@@ -1,6 +1,8 @@
 package room
 
 import (
+	"time"
+
 	"github.com/ayushgpt01/chatRoomGo/internal/auth"
 	"github.com/ayushgpt01/chatRoomGo/internal/models"
 )
@@ -11,8 +13,11 @@ type JoinRoomPayload struct {
 }
 
 type ResponseRoom struct {
-	Id   models.RoomId `json:"id"`
-	Name string        `json:"name"`
+	Id               models.RoomId          `json:"id"`
+	Name             string                 `json:"name"`
+	ParticipantCount int                    `json:"participantCount"`
+	UpdatedAt        time.Time              `json:"updatedAt"`
+	Members          []*models.ResponseUser `json:"members,omitempty"`
 }
 
 type JoinRoomResponse struct {

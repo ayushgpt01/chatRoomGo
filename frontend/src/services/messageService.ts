@@ -40,7 +40,6 @@ const messageService = {
 		const data = response.data;
 
 		z.array(MessageSchema).parse(data.messages);
-		data.messages.reverse();
 
 		return data;
 	},

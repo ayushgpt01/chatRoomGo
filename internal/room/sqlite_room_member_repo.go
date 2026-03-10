@@ -17,6 +17,9 @@ type RoomMemberStore interface {
 	CountByRoomId(ctx context.Context, roomId models.RoomId) (int, error)
 	GetByRoomId(ctx context.Context, roomId models.RoomId) ([]models.UserId, error)
 	GetRoomsByUserId(ctx context.Context, userId models.UserId, limit int, cursor *string) ([]*models.Room, *string, error)
+	UpdateLastMessageRead(ctx context.Context, roomId models.RoomId, userId models.UserId, messageId models.MessageId) error
+	GetLastMessageRead(ctx context.Context, roomId models.RoomId, userId models.UserId) (models.MessageId, error)
+	GetRoomMembers(ctx context.Context, roomId models.RoomId) ([]*models.User, error)
 }
 
 type SQLiteRoomMemberRepo struct {
@@ -38,6 +41,7 @@ func (s *SQLiteRoomMemberRepo) init(ctx context.Context) error {
 		room_id INTEGER NOT NULL,
 		user_id INTEGER NOT NULL,
 		joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		last_message_read_id INTEGER DEFAULT 0,
 		FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE,
 		FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
 		PRIMARY KEY (room_id, user_id)
@@ -183,4 +187,70 @@ func (s *SQLiteRoomMemberRepo) GetRoomsByUserId(ctx context.Context, userId mode
 	}
 
 	return rooms, nextCursor, nil
+}
+
+func (s *SQLiteRoomMemberRepo) UpdateLastMessageRead(ctx context.Context, roomId models.RoomId, userId models.UserId, messageId models.MessageId) error {
+	res, err := s.db.ExecContext(ctx,
+		"UPDATE room_members SET last_message_read_id = ? WHERE room_id = ? AND user_id = ?",
+		messageId, roomId, userId)
+	if err != nil {
+		return fmt.Errorf("update last message read room_id=%d user_id=%d: %w", roomId, userId, err)
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("checking rows affected for update last message read %d: %w", roomId, err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("update last message read room_id=%d user_id=%d: %w", roomId, userId, models.ErrNotFound)
+	}
+
+	return nil
+}
+
+func (s *SQLiteRoomMemberRepo) GetLastMessageRead(ctx context.Context, roomId models.RoomId, userId models.UserId) (models.MessageId, error) {
+	query := "SELECT last_message_read_id FROM room_members WHERE room_id = ? AND user_id = ?"
+	var lastReadId models.MessageId
+
+	err := s.db.QueryRowContext(ctx, query, roomId, userId).Scan(&lastReadId)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, fmt.Errorf("get last message read room_id=%d user_id=%d: %w", roomId, userId, models.ErrNotFound)
+		}
+		return 0, fmt.Errorf("get last message read room_id=%d user_id=%d: %w", roomId, userId, err)
+	}
+
+	return lastReadId, nil
+}
+
+func (s *SQLiteRoomMemberRepo) GetRoomMembers(ctx context.Context, roomId models.RoomId) ([]*models.User, error) {
+	query := `SELECT u.id, u.name, u.user_name, u.account_role, u.created_at, u.updated_at
+	FROM users u
+	JOIN room_members rm ON u.id = rm.user_id
+	WHERE rm.room_id = ?
+	ORDER BY u.created_at ASC
+	LIMIT 50`
+
+	rows, err := s.db.QueryContext(ctx, query, roomId)
+	if err != nil {
+		return nil, fmt.Errorf("get room members room_id=%d: %w", roomId, err)
+	}
+	defer rows.Close()
+
+	var members []*models.User
+	for rows.Next() {
+		user := &models.User{}
+		err := rows.Scan(&user.Id, &user.Name, &user.Username, &user.AccountRole, &user.CreatedAt, &user.UpdatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("scan room member room_id=%d: %w", roomId, err)
+		}
+		members = append(members, user)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate room members room_id=%d: %w", roomId, err)
+	}
+
+	return members, nil
 }

@@ -6,6 +6,8 @@ export enum OutgoingEventTypes {
 	EventSendMessage = "message.send",
 	EventEditMessage = "message.edit",
 	EventDeleteMessage = "message.delete",
+	EventStartTyping = "typing.start",
+	EventStopTyping = "typing.stop",
 }
 
 export enum IncomingEventTypes {
@@ -14,6 +16,8 @@ export enum IncomingEventTypes {
 	EventMessageDeleted = "message_deleted",
 	EventUserJoinedRoom = "user_joined_room",
 	EventUserLeftRoom = "user_left_room",
+	EventUserStartedTyping = "user_started_typing",
+	EventUserStoppedTyping = "user_stopped_typing",
 	EventError = "error",
 }
 
@@ -79,12 +83,31 @@ export type ErrorEvent = ServerEvent<
 	}
 >;
 
+export type UserStartedTypingEvent = ServerEvent<
+	IncomingEventTypes.EventUserStartedTyping,
+	{
+		roomId: number;
+		userId: number;
+		userName: string;
+	}
+>;
+
+export type UserStoppedTypingEvent = ServerEvent<
+	IncomingEventTypes.EventUserStoppedTyping,
+	{
+		roomId: number;
+		userId: number;
+	}
+>;
+
 export type IncomingSocketEvent =
 	| MessageCreatedEvent
 	| MessageUpdatedEvent
 	| MessageDeletedEvent
 	| UserJoinedRoomEvent
 	| UserLeftRoomEvent
+	| UserStartedTypingEvent
+	| UserStoppedTypingEvent
 	| ErrorEvent;
 
 // ---- Client TYPES ---------
@@ -112,7 +135,23 @@ export type DeleteMessageEvent = ClientEvent<
 	}
 >;
 
+export type StartTypingEvent = ClientEvent<
+	OutgoingEventTypes.EventStartTyping,
+	{
+		roomId: number;
+	}
+>;
+
+export type StopTypingEvent = ClientEvent<
+	OutgoingEventTypes.EventStopTyping,
+	{
+		roomId: number;
+	}
+>;
+
 export type OutgoingSocketEvent =
 	| SendMessageEvent
 	| EditMessageEvent
-	| DeleteMessageEvent;
+	| DeleteMessageEvent
+	| StartTypingEvent
+	| StopTypingEvent;

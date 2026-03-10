@@ -9,7 +9,15 @@ type ResponseMessage struct {
 	SenderId   UserId     `json:"senderId"`
 	SentAt     time.Time  `json:"sentAt"`
 	EditedAt   *time.Time `json:"editedAt"`
-	Read       bool       `json:"read"`
-	Nonce      *string    `json:"nonce,omitempty"`
+	Nonce      *string    `json:"nonce"`
 	RoomId     RoomId     `json:"roomId"`
+	Delivered  bool       `json:"delivered"`
+	ReadBy     []UserId   `json:"readBy"`
+}
+
+type ResponseUser struct {
+	Id          UserId `json:"id"`
+	Username    string `json:"username"`
+	Name        string `json:"name"`
+	IsAnonymous bool   `json:"isAnonymous"`
 }

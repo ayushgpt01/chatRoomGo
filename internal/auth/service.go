@@ -103,7 +103,7 @@ func (srv *AuthService) HandleGuestSignup(ctx context.Context) (LoginResponse, e
 	}
 
 	return LoginResponse{
-		User: ResponseUser{
+		User: models.ResponseUser{
 			Id:          user.Id,
 			Username:    user.Username,
 			Name:        user.Name,
@@ -148,7 +148,7 @@ func (srv *AuthService) HandleSignup(ctx context.Context, payload SignupPayload)
 	}
 
 	return LoginResponse{
-		User: ResponseUser{
+		User: models.ResponseUser{
 			Id:          user.Id,
 			Username:    user.Username,
 			Name:        user.Name,
@@ -195,7 +195,7 @@ func (srv *AuthService) HandleLogin(ctx context.Context, payload LoginPayload) (
 	}
 
 	return LoginResponse{
-		User: ResponseUser{
+		User: models.ResponseUser{
 			Id:          u.Id,
 			Username:    u.Username,
 			Name:        u.Name,
@@ -224,26 +224,26 @@ func (srv *AuthService) HandleRefresh(ctx context.Context, providedToken string)
 	return token, nil
 }
 
-func (srv *AuthService) GetCurrentUser(ctx context.Context, accessToken string) (ResponseUser, error) {
+func (srv *AuthService) GetCurrentUser(ctx context.Context, accessToken string) (models.ResponseUser, error) {
 	userId, err := srv.getByAccessToken(accessToken)
 	if err != nil {
 		if errors.Is(err, models.ErrUnauthorized) {
-			return ResponseUser{}, models.ErrUnauthorized
+			return models.ResponseUser{}, models.ErrUnauthorized
 		}
 
-		return ResponseUser{}, fmt.Errorf("getting user id by access token: %w", err)
+		return models.ResponseUser{}, fmt.Errorf("getting user id by access token: %w", err)
 	}
 
 	user, err := srv.userStore.GetById(ctx, userId)
 	if err != nil {
 		if errors.Is(err, models.ErrNotFound) {
-			return ResponseUser{}, models.ErrUnauthorized
+			return models.ResponseUser{}, models.ErrUnauthorized
 		}
 
-		return ResponseUser{}, fmt.Errorf("getting user by id=%d: %w", userId, err)
+		return models.ResponseUser{}, fmt.Errorf("getting user by id=%d: %w", userId, err)
 	}
 
-	return ResponseUser{
+	return models.ResponseUser{
 		Id:          user.Id,
 		Username:    user.Username,
 		Name:        user.Name,

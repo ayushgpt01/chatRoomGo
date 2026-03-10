@@ -1,3 +1,4 @@
+import { AxiosError } from "axios";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { LoginResponse } from "@/services/authService";
@@ -27,7 +28,7 @@ export interface RoomState {
 const useRoomStore = create<RoomState>()(
 	persist(
 		(set, get) => ({
-			room: null,
+			room: null as Room | null,
 			roomsList: [],
 
 			isJoining: false,
@@ -45,8 +46,21 @@ const useRoomStore = create<RoomState>()(
 					const { room, login } = await roomService.join(payload);
 					set({ isJoining: false, room });
 					return { login };
-				} catch (err) {
-					set({ error: getErrorMessage(err), isJoining: false });
+				} catch (err: unknown) {
+					// Check for 50 member limit error
+					if (
+						err instanceof AxiosError &&
+						err?.response?.status === 400 &&
+						err?.response?.data?.message?.includes("50 members")
+					) {
+						set({
+							error:
+								"This room has reached the maximum limit of 50 members. You cannot join this room.",
+							isJoining: false,
+						});
+					} else {
+						set({ error: getErrorMessage(err), isJoining: false });
+					}
 					throw err;
 				}
 			},
@@ -58,7 +72,7 @@ const useRoomStore = create<RoomState>()(
 					await roomService.leave(room.id);
 
 					set({ isLeaving: false, room: null });
-				} catch (err) {
+				} catch (err: unknown) {
 					set({
 						error: getErrorMessage(err),
 						isLeaving: false,
@@ -73,7 +87,7 @@ const useRoomStore = create<RoomState>()(
 					set({ isCreating: false, room: res.room });
 
 					return res.room.id;
-				} catch (err) {
+				} catch (err: unknown) {
 					set({
 						error: getErrorMessage(err),
 						isLeaving: false,
@@ -100,7 +114,7 @@ const useRoomStore = create<RoomState>()(
 						cursor: nextCursor,
 						hasMore: nextCursor !== null,
 					}));
-				} catch (err) {
+				} catch (err: unknown) {
 					set({
 						error: getErrorMessage(err),
 						isFetching: false,

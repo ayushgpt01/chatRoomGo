@@ -2,12 +2,15 @@ import { useEffect } from "react";
 import useAuthStore from "@/stores/authStore";
 import useMessagesStore from "@/stores/messagesStore";
 import useSocketStore from "@/stores/socketStore";
+import { useTypingStore } from "@/stores/typingStore";
 import {
 	type ErrorEvent,
 	IncomingEventTypes,
 	type MessageCreatedEvent,
 	type MessageDeletedEvent,
 	type MessageUpdatedEvent,
+	type UserStartedTypingEvent,
+	type UserStoppedTypingEvent,
 } from "@/types/events";
 
 export default function useSocketEvents(roomId: number) {
@@ -15,6 +18,7 @@ export default function useSocketEvents(roomId: number) {
 	const subscribe = useSocketStore((s) => s.subscribe);
 	const connect = useSocketStore((s) => s.connect);
 	const disconnect = useSocketStore((s) => s.disconnect);
+	const handleTypingEvent = useTypingStore((s) => s.handleTypingEvent);
 
 	useEffect(() => {
 		if (!userId || !roomId) return;
@@ -85,11 +89,36 @@ export default function useSocketEvents(roomId: number) {
 			},
 		);
 
+		const unsubStartedTyping = subscribe(
+			IncomingEventTypes.EventUserStartedTyping,
+			(event: UserStartedTypingEvent) => {
+				if (event.payload.roomId !== roomId) return;
+				handleTypingEvent({
+					type: "user_started_typing",
+					payload: event.payload,
+				});
+			},
+		);
+
+		const unsubStoppedTyping = subscribe(
+			IncomingEventTypes.EventUserStoppedTyping,
+			(event: UserStoppedTypingEvent) => {
+				if (event.payload.roomId !== roomId) return;
+				// We need the userName, but it's not in the stopped typing event
+				// For now, we'll handle this differently
+				useTypingStore
+					.getState()
+					.removeTypingUser(event.payload.roomId, "Unknown User");
+			},
+		);
+
 		return () => {
 			unsubCreated();
 			unsubUpdated();
 			unsubDeleted();
 			unsubError();
+			unsubStartedTyping();
+			unsubStoppedTyping();
 		};
-	}, [roomId, subscribe]);
+	}, [roomId, subscribe, handleTypingEvent]);
 }

@@ -67,17 +67,17 @@ func SeedChatData(ctx context.Context, db *sql.DB) error {
 
 	// ---- Insert Messages ----
 	_, err = tx.ExecContext(ctx, `
-		INSERT INTO messages (content, user_id, room_id, read)
+		INSERT INTO messages (content, user_id, room_id)
 		VALUES 
-			(?, ?, ?, ?),
-			(?, ?, ?, ?),
-			(?, ?, ?, ?),
-			(?, ?, ?, ?)
+			(?, ?, ?),
+			(?, ?, ?),
+			(?, ?, ?),
+			(?, ?, ?)
 	`,
-		"Hey Bob 👋", aliceID, roomID, false,
-		"Hey Alice! What's up?", bobID, roomID, false,
-		"Just testing the seeded chat.", aliceID, roomID, false,
-		"Looks good to me 👍", bobID, roomID, false,
+		"Hey Bob 👋", aliceID, roomID,
+		"Hey Alice! What's up?", bobID, roomID,
+		"Just testing the seeded chat.", aliceID, roomID,
+		"Looks good to me 👍", bobID, roomID,
 	)
 	if err != nil {
 		return err

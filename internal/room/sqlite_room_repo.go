@@ -78,11 +78,11 @@ func (s *SQLiteRoomRepo) Create(ctx context.Context, name string) (*models.Room,
 func (s *SQLiteRoomRepo) GetById(ctx context.Context, roomId models.RoomId) (*models.Room, error) {
 	var room models.Room
 
-	row := s.db.QueryRowContext(
-		ctx,
-		"SELECT id, name, created_at, updated_at FROM rooms WHERE id = ?",
-		roomId,
-	)
+	row := s.db.QueryRowContext(ctx, `
+		SELECT r.id, r.name, r.created_at, r.updated_at
+		FROM rooms r 
+		WHERE r.id = ?
+	`, roomId)
 
 	err := row.Scan(&room.Id, &room.Name, &room.CreatedAt, &room.UpdatedAt)
 	if err != nil {

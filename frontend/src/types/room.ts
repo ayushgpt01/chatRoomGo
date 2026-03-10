@@ -1,8 +1,12 @@
 import { z } from "zod";
+import { UserSchema } from "./auth";
 
 export const RoomSchema = z.object({
 	id: z.coerce.number(),
 	name: z.string(),
+	participantCount: z.number().default(1),
+	updatedAt: z.string(),
+	members: z.array(UserSchema).optional(),
 });
 
 export type Room = z.infer<typeof RoomSchema>;

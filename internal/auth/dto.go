@@ -13,15 +13,8 @@ type LoginPayload struct {
 	Password string `json:"password"`
 }
 
-type ResponseUser struct {
-	Id          models.UserId `json:"id"`
-	Username    string        `json:"username"`
-	Name        string        `json:"name"`
-	IsAnonymous bool          `json:"isAnonymous"`
-}
-
 type LoginResponse struct {
-	User         ResponseUser `json:"user"`
-	Token        string       `json:"token"`
-	RefreshToken string       `json:"refreshToken"`
+	User         models.ResponseUser `json:"user"`
+	Token        string              `json:"token"`
+	RefreshToken string              `json:"refreshToken"`
 }

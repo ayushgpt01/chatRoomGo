@@ -17,6 +17,7 @@ type MessageStore interface {
 	UpdateContent(ctx context.Context, id models.MessageId, content string) error
 	GetResponseById(ctx context.Context, id models.MessageId) (*models.ResponseMessage, error)
 	GetMessagesById(ctx context.Context, roomId models.RoomId, limit int, cursor *string) (*GetMessagesResponse, error)
+	MarkAsDelivered(ctx context.Context, messageId models.MessageId) error
 }
 
 type SQLiteMessageRepo struct {
@@ -41,7 +42,7 @@ func (s *SQLiteMessageRepo) init(ctx context.Context) error {
 		room_id INTEGER NOT NULL,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 		updated_at DATETIME DEFAULT NULL,
-		read BOOLEAN DEFAULT FALSE,
+		delivered BOOLEAN DEFAULT TRUE,
 		FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT,
 		FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE RESTRICT
 	);`
@@ -77,11 +78,11 @@ func (s *SQLiteMessageRepo) init(ctx context.Context) error {
 func (s *SQLiteMessageRepo) GetById(ctx context.Context, id models.MessageId) (*models.Message, error) {
 	var message models.Message
 
-	row := s.db.QueryRowContext(ctx, `SELECT id, content, user_id, room_id, created_at, updated_at
+	row := s.db.QueryRowContext(ctx, `SELECT id, content, user_id, room_id, created_at, updated_at, delivered
 	FROM messages
 	WHERE id = ?`, id)
 
-	err := row.Scan(&message.Id, &message.Content, &message.UserId, &message.RoomId, &message.CreatedAt, &message.UpdatedAt)
+	err := row.Scan(&message.Id, &message.Content, &message.UserId, &message.RoomId, &message.CreatedAt, &message.UpdatedAt, &message.Delivered)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -143,10 +144,37 @@ func (s *SQLiteMessageRepo) UpdateContent(ctx context.Context, id models.Message
 	return nil
 }
 
+func (s *SQLiteMessageRepo) GetMessageReaders(ctx context.Context, messageId models.MessageId, roomId models.RoomId) ([]models.UserId, error) {
+	query := `SELECT rm.user_id 
+	FROM room_members rm 
+	WHERE rm.room_id = ? AND rm.last_message_read_id >= ?`
+
+	rows, err := s.db.QueryContext(ctx, query, roomId, messageId)
+	if err != nil {
+		return nil, fmt.Errorf("getting message readers for message %d: %w", messageId, err)
+	}
+	defer rows.Close()
+
+	var readers []models.UserId
+	for rows.Next() {
+		var userId models.UserId
+		if err := rows.Scan(&userId); err != nil {
+			return nil, fmt.Errorf("scanning message reader: %w", err)
+		}
+		readers = append(readers, userId)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating message readers: %w", err)
+	}
+
+	return readers, nil
+}
+
 func (s *SQLiteMessageRepo) GetResponseById(ctx context.Context, id models.MessageId) (*models.ResponseMessage, error) {
 	var message models.ResponseMessage
 
-	row := s.db.QueryRowContext(ctx, `SELECT m.id, m.content, m.updated_at, u.id, u.name, m.created_at, m.read, m.room_id
+	row := s.db.QueryRowContext(ctx, `SELECT m.id, m.content, m.updated_at, u.id, u.name, m.created_at, m.room_id, m.delivered
 	FROM messages m
 	JOIN users u ON m.user_id = u.id
 	WHERE m.id = ?`, id)
@@ -158,8 +186,8 @@ func (s *SQLiteMessageRepo) GetResponseById(ctx context.Context, id models.Messa
 		&message.SenderId,
 		&message.SenderName,
 		&message.SentAt,
-		&message.Read,
 		&message.RoomId,
+		&message.Delivered,
 	)
 
 	if err != nil {
@@ -169,11 +197,20 @@ func (s *SQLiteMessageRepo) GetResponseById(ctx context.Context, id models.Messa
 		return nil, fmt.Errorf("scanning response message by id %d: %w", id, err)
 	}
 
+	// Get readers for this message
+	readers, err := s.GetMessageReaders(ctx, id, message.RoomId)
+	if err != nil {
+		// Don't fail the entire operation if we can't get readers
+		readers = []models.UserId{}
+	}
+
+	message.ReadBy = readers
+
 	return &message, nil
 }
 
 func (s *SQLiteMessageRepo) GetMessagesById(ctx context.Context, roomId models.RoomId, limit int, cursor *string) (*GetMessagesResponse, error) {
-	query := `SELECT m.id, m.content, m.updated_at, u.id, u.name, m.created_at, m.read, m.room_id
+	query := `SELECT m.id, m.content, m.updated_at, u.id, u.name, m.created_at, m.room_id, m.delivered
 	FROM messages m
 	JOIN users u ON m.user_id = u.id
 	WHERE m.room_id = ?`
@@ -181,11 +218,11 @@ func (s *SQLiteMessageRepo) GetMessagesById(ctx context.Context, roomId models.R
 	args := []any{roomId}
 
 	if cursor != nil && *cursor != "" {
-		query += " AND m.id < ? "
+		query += " AND m.id > ? "
 		args = append(args, *cursor)
 	}
 
-	query += " ORDER BY m.id DESC LIMIT ?"
+	query += " ORDER BY m.id ASC LIMIT ?"
 	args = append(args, limit+1)
 
 	rows, err := s.db.QueryContext(ctx, query, args...)
@@ -205,13 +242,22 @@ func (s *SQLiteMessageRepo) GetMessagesById(ctx context.Context, roomId models.R
 			&msg.SenderId,
 			&msg.SenderName,
 			&msg.SentAt,
-			&msg.Read,
 			&msg.RoomId,
+			&msg.Delivered,
 		)
 
 		if err != nil {
 			return nil, fmt.Errorf("scanning messages for room %d: %w", roomId, err)
 		}
+
+		// Get readers for this message
+		readers, err := s.GetMessageReaders(ctx, msg.Id, roomId)
+		if err != nil {
+			// Don't fail the entire operation if we can't get readers
+			readers = []models.UserId{}
+		}
+
+		msg.ReadBy = readers
 		messages = append(messages, msg)
 	}
 
@@ -221,11 +267,31 @@ func (s *SQLiteMessageRepo) GetMessagesById(ctx context.Context, roomId models.R
 
 	var nextCursor *string
 	if len(messages) > limit {
-		lastRoom := messages[limit-1]
+		lastRoom := messages[limit]
 		c := fmt.Sprintf("%d", lastRoom.Id)
 		nextCursor = &c
 		messages = messages[:limit]
 	}
 
 	return &GetMessagesResponse{Messages: messages, NextCursor: nextCursor}, nil
+}
+
+func (s *SQLiteMessageRepo) MarkAsDelivered(ctx context.Context, messageId models.MessageId) error {
+	res, err := s.db.ExecContext(ctx,
+		"UPDATE messages SET delivered = TRUE WHERE id = ?",
+		messageId)
+	if err != nil {
+		return fmt.Errorf("marking message %d as delivered: %w", messageId, err)
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("checking rows affected for mark as delivered %d: %w", messageId, err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("marking message %d as delivered: %w", messageId, models.ErrNotFound)
+	}
+
+	return nil
 }
