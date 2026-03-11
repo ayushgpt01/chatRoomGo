@@ -7,14 +7,21 @@ import (
 )
 
 func handleViews(mux *http.ServeMux) {
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		path := filepath.Join("../../static", r.URL.Path)
+	staticDir := os.Getenv("STATIC_FILES_PATH")
+	if staticDir == "" {
+		staticDir = "./static"
+	}
 
-		// If the file exists, serve it. If not, serve index.html (for the SPA)
-		if _, err := os.Stat(path); os.IsNotExist(err) {
-			http.ServeFile(w, r, "../../static/index.html")
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		fullPath := filepath.Join(staticDir, r.URL.Path)
+
+		info, err := os.Stat(fullPath)
+		if os.IsNotExist(err) || info.IsDir() {
+			// Serve index.html for SPA routing
+			http.ServeFile(w, r, filepath.Join(staticDir, "index.html"))
 			return
 		}
-		http.FileServer(http.Dir("../../static")).ServeHTTP(w, r)
+
+		http.FileServer(http.Dir(staticDir)).ServeHTTP(w, r)
 	})
 }

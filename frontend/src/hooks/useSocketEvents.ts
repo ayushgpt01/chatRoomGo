@@ -24,7 +24,11 @@ export default function useSocketEvents(roomId: number) {
 		if (!userId || !roomId) return;
 
 		const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-		const wsUrl = `${protocol}//${import.meta.env.VITE_WS_URL}/ws?room=${roomId}&user=${userId}`;
+		const wsUrl = `${protocol}//${
+			import.meta.env.VITE_ENV === "development"
+				? import.meta.env.VITE_WS_URL
+				: window.location.host
+		}/ws?room=${roomId}&user=${userId}`;
 
 		connect(wsUrl);
 

@@ -5,7 +5,7 @@ import useAuthStore from "@/stores/authStore";
 // 1. Determine the Base URL
 // This logic checks if we are in dev; if so, it uses the dev URL,
 // otherwise it defaults to the production string from your env.
-const baseURL = `${import.meta.env.VITE_API_URL}/api`;
+const baseURL = `${import.meta.env.VITE_ENV === "development" ?  import.meta.env.VITE_API_URL : ""}/api`;
 
 const axiosClient = axios.create({
 	baseURL: baseURL,
