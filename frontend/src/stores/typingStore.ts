@@ -1,44 +1,55 @@
 import { create } from "zustand";
+import { useShallow } from "zustand/react/shallow";
+import type { User } from "@/types/auth";
 import type { TypingEvent } from "@/types/message";
 
 interface TypingState {
-	// Map of roomId to Set of typing user names
-	typingUsers: Record<number, Set<string>>;
+	typingUsers: Record<number, number[]>;
+	userMap: Record<number, { name: string; username: string }>;
 
 	// Actions
-	addTypingUser: (roomId: number, userName: string) => void;
-	removeTypingUser: (roomId: number, userName: string) => void;
-	getTypingUsers: (roomId: number) => string[];
+	addTypingUser: (
+		roomId: number,
+		userId: number,
+		userInfo: { name: string; username: string },
+	) => void;
+	removeTypingUser: (roomId: number, userId: number) => void;
 	clearRoomTyping: (roomId: number) => void;
 	handleTypingEvent: (event: TypingEvent) => void;
+	updateUserMap: (users: User[]) => void;
 }
 
 export const useTypingStore = create<TypingState>((set, get) => ({
 	typingUsers: {},
+	userMap: {},
 
-	addTypingUser: (roomId: number, userName: string) => {
+	addTypingUser: (roomId, userId, userInfo) => {
 		set((state) => {
-			const currentTyping = state.typingUsers[roomId] || new Set();
-			const newTyping = new Set(currentTyping);
-			newTyping.add(userName);
+			const current = state.typingUsers[roomId] ?? [];
+
+			if (current.includes(userId)) return state;
 
 			return {
 				typingUsers: {
 					...state.typingUsers,
-					[roomId]: newTyping,
+					[roomId]: [...current, userId],
+				},
+				userMap: {
+					...state.userMap,
+					[userId]: userInfo,
 				},
 			};
 		});
 	},
 
-	removeTypingUser: (roomId: number, userName: string) => {
+	removeTypingUser: (roomId, userId) => {
 		set((state) => {
-			const currentTyping = state.typingUsers[roomId] || new Set();
-			const newTyping = new Set(currentTyping);
-			newTyping.delete(userName);
+			const current = state.typingUsers[roomId];
+			if (!current) return state;
 
-			// Clean up empty sets to save memory
-			if (newTyping.size === 0) {
+			const next = current.filter((id) => id !== userId);
+
+			if (next.length === 0) {
 				const { [roomId]: _, ...rest } = state.typingUsers;
 				return { typingUsers: rest };
 			}
@@ -46,65 +57,56 @@ export const useTypingStore = create<TypingState>((set, get) => ({
 			return {
 				typingUsers: {
 					...state.typingUsers,
-					[roomId]: newTyping,
+					[roomId]: next,
 				},
 			};
 		});
 	},
 
-	getTypingUsers: (roomId: number) => {
-		return Array.from(get().typingUsers[roomId] || []);
-	},
-
-	clearRoomTyping: (roomId: number) => {
+	clearRoomTyping: (roomId) => {
 		set((state) => {
 			const { [roomId]: _, ...rest } = state.typingUsers;
 			return { typingUsers: rest };
 		});
 	},
 
-	handleTypingEvent: (event: TypingEvent) => {
+	handleTypingEvent: (event) => {
 		const { type, payload } = event;
-		const { roomId, userName } = payload;
+		const { roomId, userId, userName } = payload;
 
 		if (type === "user_started_typing") {
-			get().addTypingUser(roomId, userName);
-		} else if (type === "user_stopped_typing") {
-			get().removeTypingUser(roomId, userName);
+			get().addTypingUser(roomId, userId, {
+				name: userName,
+				username: userName,
+			});
 		}
+
+		if (type === "user_stopped_typing") {
+			get().removeTypingUser(roomId, userId);
+		}
+	},
+
+	updateUserMap: (users) => {
+		set((state) => {
+			const next = { ...state.userMap };
+
+			users.forEach((u) => {
+				next[u.id] = {
+					name: u.name,
+					username: u.username,
+				};
+			});
+
+			return { userMap: next };
+		});
 	},
 }));
 
-// Auto-clear typing after 3 seconds of inactivity
-export const setupTypingTimeouts = () => {
-	const timeouts: Record<string, NodeJS.Timeout> = {};
-
-	return {
-		setTypingTimeout: (
-			roomId: number,
-			userName: string,
-			callback: () => void,
-		) => {
-			const key = `${roomId}-${userName}`;
-
-			// Clear existing timeout for this user
-			if (timeouts[key]) {
-				clearTimeout(timeouts[key]);
-			}
-
-			// Set new timeout
-			timeouts[key] = setTimeout(() => {
-				callback();
-				delete timeouts[key];
-			}, 3000);
-		},
-
-		clearTypingTimeout: (roomId: number, userName: string) => {
-			const key = `${roomId}-${userName}`;
-			if (timeouts[key]) {
-				clearTimeout(timeouts[key]);
-				delete timeouts[key];
-			}
-		},
-	};
-};
+export function useTypingUsers(roomId: number) {
+	return useTypingStore(
+		useShallow((state) => {
+			const ids = state.typingUsers[roomId] ?? [];
+			return ids.map((id) => state.userMap[id]).filter(Boolean);
+		}),
+	);
+}

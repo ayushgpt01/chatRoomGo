@@ -9,6 +9,7 @@ interface SocketState {
 	socket: WebSocket | null;
 	status: "connecting" | "open" | "closed";
 	error: string | null;
+	currentUrl: string | null;
 	connect: (url: string) => void;
 	disconnect: () => void;
 	send: (data: unknown) => void;
@@ -31,23 +32,27 @@ const MAX_QUEUE_SIZE = 100;
 
 const useSocketStore = create<SocketState>((set, get) => ({
 	socket: null,
-	status: "closed",
+	status: "closed" as const,
 	error: null,
+	currentUrl: null,
 
 	connect: (url) => {
-		const current = get().socket;
+		const { socket: current, status, currentUrl } = get();
 		if (
-			current?.readyState === WebSocket.OPEN ||
-			current?.readyState === WebSocket.CONNECTING
-		)
+			currentUrl === url &&
+			(current?.readyState === WebSocket.OPEN ||
+				current?.readyState === WebSocket.CONNECTING ||
+				status === "connecting")
+		) {
 			return;
+		}
 
-		set({ status: "connecting", error: null });
 		const socket = new WebSocket(url);
+		set({ socket, status: "connecting", error: null, currentUrl: url });
 
 		socket.onopen = () => {
-			console.log("WS Connected");
-			set({ socket, status: "open" });
+			console.log("WS Connected", url);
+			set({ status: "open" });
 			retryCount = 0;
 			clearTimeout(reconnectTimeout);
 			while (messageQueue.length > 0) {
@@ -70,7 +75,10 @@ const useSocketStore = create<SocketState>((set, get) => ({
 		};
 
 		socket.onclose = (event) => {
-			set({ socket: null, status: "closed" });
+			if (get().socket === socket) {
+				set({ socket: null, status: "closed" });
+			}
+
 			if (event.code !== CLOSE_CODE) {
 				const delay = Math.min(1000 * 2 ** retryCount, MAX_RECONNECT_DELAY);
 				reconnectTimeout = setTimeout(() => {
@@ -87,13 +95,18 @@ const useSocketStore = create<SocketState>((set, get) => ({
 		const { socket } = get();
 		clearTimeout(reconnectTimeout);
 		messageQueue.length = 0;
+		console.log("WS Disconnected", socket?.url);
 		socket?.close(CLOSE_CODE);
-		set({ socket: null, status: "closed" });
+
+		if (get().socket === socket) {
+			set({ socket: null, status: "closed", currentUrl: null });
+		}
 	},
 
 	send: (data) => {
 		const { socket, status } = get();
 		const payload = JSON.stringify(data);
+
 		if (socket && status === "open") {
 			socket.send(payload);
 		} else {

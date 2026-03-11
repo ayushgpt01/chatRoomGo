@@ -1,13 +1,15 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Users } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import MessageList from "@/components/MessageList";
 import RoomsSidebar from "@/components/RoomsSidebar";
 import useSocketEvents from "@/hooks/useSocketEvents";
 import useMessagesStore from "@/stores/messagesStore";
 import useRoomStore from "@/stores/roomStore";
+import useSocketStore from "@/stores/socketStore";
 import useToastStore from "@/stores/toastStore";
 import { useTypingStore } from "@/stores/typingStore";
+import { OutgoingEventTypes } from "@/types/events";
 
 export const Route = createFileRoute("/rooms/$roomId")({
 	component: RoomComponent,
@@ -46,14 +48,33 @@ function RoomComponent() {
 	const navigate = useNavigate();
 	const { roomId } = Route.useParams();
 	const [message, setMessage] = useState("");
-	const getTypingUsers = useTypingStore((s) => s.getTypingUsers);
+	const updateUserMap = useTypingStore((s) => s.updateUserMap);
+	const userMap = useTypingStore((s) => s.userMap);
+	const socketSend = useSocketStore((s) => s.send);
+
+	const [isTyping, setIsTyping] = useState(false);
+	const [stopTypingTimeoutId, setStopTypingTimeoutId] = useState<number | null>(
+		null,
+	);
 
 	useSocketEvents(Number(roomId));
 
 	const room = useRoomStore((s) => s.room);
+	const roomsList = useRoomStore((s) => s.roomsList);
 	const leave = useRoomStore((s) => s.leave);
 	const isLeaving = useRoomStore((s) => s.isLeaving);
 	const showToast = useToastStore((s) => s.show);
+
+	// Update user map when room members are available
+	useEffect(() => {
+		const currentRoom = roomsList.find((r) => r.id === Number(roomId));
+		if (
+			currentRoom?.members &&
+			currentRoom.members.length !== Object.values(userMap).length
+		) {
+			updateUserMap(currentRoom.members);
+		}
+	}, [roomsList, roomId, updateUserMap, userMap]);
 
 	const handleLeave = async () => {
 		try {
@@ -75,18 +96,49 @@ function RoomComponent() {
 
 		await send(Number(roomId), message.trim());
 		setMessage("");
+		if (isTyping) {
+			socketSend({
+				type: OutgoingEventTypes.EventStopTyping,
+				data: { roomId: Number(roomId) },
+			});
+			setIsTyping(false);
+		}
+	};
+
+	const scheduleStopTyping = () => {
+		if (stopTypingTimeoutId !== null) {
+			window.clearTimeout(stopTypingTimeoutId);
+		}
+
+		const id = window.setTimeout(() => {
+			socketSend({
+				type: OutgoingEventTypes.EventStopTyping,
+				data: { roomId: Number(roomId) },
+			});
+			setIsTyping(false);
+			setStopTypingTimeoutId(null);
+		}, 1200);
+		setStopTypingTimeoutId(id);
+	};
+
+	const handleTyping = () => {
+		if (!isTyping) {
+			socketSend({
+				type: OutgoingEventTypes.EventStartTyping,
+				data: { roomId: Number(roomId) },
+			});
+			setIsTyping(true);
+		}
+		scheduleStopTyping();
 	};
 
 	return (
 		<div className="h-screen flex bg-base-200">
-			{/* Sidebar */}
 			<RoomsSidebar />
 
-			{/* Chat Area */}
 			<div className="flex-1 flex flex-col">
 				<div className="navbar h-16 bg-base-100 border-b px-4">
 					<div className="flex items-center gap-3 flex-1">
-						{/* Back Button */}
 						<button
 							type="button"
 							className="btn btn-ghost btn-circle btn-sm lg:hidden"
@@ -96,7 +148,6 @@ function RoomComponent() {
 							<ArrowLeft className="w-4 h-4" />
 						</button>
 
-						{/* Room Info */}
 						<div className="flex items-center gap-3 flex-1">
 							<div className="hidden sm:block">
 								<div className="font-semibold text-lg">
@@ -109,7 +160,6 @@ function RoomComponent() {
 							</div>
 						</div>
 
-						{/* Header Actions */}
 						<div className="flex items-center gap-2">
 							<button
 								type="button"
@@ -130,12 +180,8 @@ function RoomComponent() {
 					</div>
 				</div>
 
-				<MessageList
-					roomId={Number(roomId)}
-					typingUsers={getTypingUsers(Number(roomId))}
-				/>
+				<MessageList roomId={Number(roomId)} />
 
-				{/* Enhanced Input */}
 				<div className="p-4 bg-base-100 border-t">
 					<div className="flex gap-2 items-end">
 						<input
@@ -143,7 +189,10 @@ function RoomComponent() {
 							className="input input-bordered flex-1"
 							placeholder="Type a message..."
 							value={message}
-							onChange={(e) => setMessage(e.target.value)}
+							onChange={(e) => {
+								setMessage(e.target.value);
+								handleTyping();
+							}}
 							onKeyDown={(e) => {
 								if (e.key === "Enter" && !e.shiftKey) {
 									e.preventDefault();
@@ -153,7 +202,6 @@ function RoomComponent() {
 							aria-label="Message input"
 						/>
 
-						{/* TODO: Add emoji picker, file upload buttons */}
 						<button
 							type="button"
 							onClick={sendMessage}

@@ -23,39 +23,45 @@ export default function useSocketEvents(roomId: number) {
 	useEffect(() => {
 		if (!userId || !roomId) return;
 
-		connect(
-			`ws://${import.meta.env.VITE_WS_URL}/ws?room=${roomId}&user=${userId}`,
-		);
+		const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+		const wsUrl = `${protocol}//${import.meta.env.VITE_WS_URL}/ws?room=${roomId}&user=${userId}`;
 
-		return () => disconnect();
+		connect(wsUrl);
+
+		return () => {
+			disconnect();
+		};
 	}, [connect, disconnect, roomId, userId]);
 
 	useEffect(() => {
-		const store = useMessagesStore.getState();
-
 		const unsubCreated = subscribe(
 			IncomingEventTypes.EventMessageCreated,
 			(event: MessageCreatedEvent) => {
-				const msg = event.payload;
+				const msg = event.payload.message;
 				if (msg.roomId !== roomId) return;
 
-				const existing = store
+				// Use fresh state from the store instead of stale state
+				const currentStore = useMessagesStore.getState();
+				const existing = currentStore
 					.getMessage(roomId)
-					.messages.some((m) => m.id === msg.id);
+					.messages.some(
+						(m) => m.id === msg.id || (m.nonce && m.nonce === msg.nonce),
+					);
 
 				if (existing) return;
 
-				store.upsertMessage(roomId, msg);
+				currentStore.upsertMessage(roomId, msg);
 			},
 		);
 
 		const unsubUpdated = subscribe(
 			IncomingEventTypes.EventMessageUpdated,
 			(event: MessageUpdatedEvent) => {
-				const msg = event.payload;
+				const msg = event.payload.message;
 				if (msg.roomId !== roomId) return;
 
-				const current = store
+				const currentStore = useMessagesStore.getState();
+				const current = currentStore
 					.getMessage(roomId)
 					.messages.find((m) => m.id === msg.id);
 
@@ -63,7 +69,7 @@ export default function useSocketEvents(roomId: number) {
 
 				if (current.content === msg.content) return;
 
-				store.upsertMessage(roomId, msg);
+				currentStore.upsertMessage(roomId, msg);
 			},
 		);
 
@@ -72,13 +78,14 @@ export default function useSocketEvents(roomId: number) {
 			(event: MessageDeletedEvent) => {
 				if (event.payload.roomId !== roomId) return;
 
-				const exists = store
+				const currentStore = useMessagesStore.getState();
+				const exists = currentStore
 					.getMessage(roomId)
 					.messages.some((m) => m.id === event.payload.messageId);
 
 				if (!exists) return;
 
-				store.removeMessage(roomId, event.payload.messageId);
+				currentStore.removeMessage(roomId, event.payload.messageId);
 			},
 		);
 
@@ -93,6 +100,7 @@ export default function useSocketEvents(roomId: number) {
 			IncomingEventTypes.EventUserStartedTyping,
 			(event: UserStartedTypingEvent) => {
 				if (event.payload.roomId !== roomId) return;
+				if (event.payload.userId === userId) return;
 				handleTypingEvent({
 					type: "user_started_typing",
 					payload: event.payload,
@@ -104,11 +112,11 @@ export default function useSocketEvents(roomId: number) {
 			IncomingEventTypes.EventUserStoppedTyping,
 			(event: UserStoppedTypingEvent) => {
 				if (event.payload.roomId !== roomId) return;
-				// We need the userName, but it's not in the stopped typing event
-				// For now, we'll handle this differently
-				useTypingStore
-					.getState()
-					.removeTypingUser(event.payload.roomId, "Unknown User");
+				if (event.payload.userId === userId) return;
+				handleTypingEvent({
+					type: "user_stopped_typing",
+					payload: event.payload,
+				});
 			},
 		);
 
@@ -120,5 +128,5 @@ export default function useSocketEvents(roomId: number) {
 			unsubStartedTyping();
 			unsubStoppedTyping();
 		};
-	}, [roomId, subscribe, handleTypingEvent]);
+	}, [roomId, subscribe, handleTypingEvent, userId]);
 }

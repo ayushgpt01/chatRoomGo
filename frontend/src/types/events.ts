@@ -35,12 +35,12 @@ export type ClientEvent<T extends OutgoingEventTypes, D> = {
 
 export type MessageCreatedEvent = ServerEvent<
 	IncomingEventTypes.EventMessageCreated,
-	Message
+	{ message: Message }
 >;
 
 export type MessageUpdatedEvent = ServerEvent<
 	IncomingEventTypes.EventMessageUpdated,
-	Message
+	{ message: Message }
 >;
 
 export type MessageDeletedEvent = ServerEvent<
@@ -97,6 +97,7 @@ export type UserStoppedTypingEvent = ServerEvent<
 	{
 		roomId: number;
 		userId: number;
+		userName: string;
 	}
 >;
 
