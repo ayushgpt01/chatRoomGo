@@ -121,14 +121,13 @@ const useMessagesStore = create<MessagesState>()((set, get) => ({
 		}));
 
 		try {
-			const created = await messageService.sendMessage({
+			await messageService.sendMessage({
 				roomId,
 				content,
+				nonce,
 			});
-
-			// Replace optimistic via nonce
-			get().replaceMessageByNonce(roomId, nonce, created);
 		} catch (err) {
+			console.error(err);
 			// remove failed optimistic
 			set((state) => ({
 				messagesPerRoom: {
@@ -220,16 +219,29 @@ const useMessagesStore = create<MessagesState>()((set, get) => ({
 			const store = state.messagesPerRoom[roomId];
 			if (!store) return state;
 
-			const exists = store.messages.some((m) => m.id === message.id);
+			const { nonce, ...assignMessage } = message;
+
+			const exists = store.messages.some(
+				(m) => m.id === message.id || (m.nonce && m.nonce === nonce),
+			);
+
+			const messages = exists
+				? store.messages.map((m) =>
+						m.id === message.id || (m.nonce && m.nonce === nonce)
+							? assignMessage
+							: m,
+					)
+				: [...store.messages, assignMessage];
 
 			return {
 				messagesPerRoom: {
 					...state.messagesPerRoom,
 					[roomId]: {
 						...store,
-						messages: exists
-							? store.messages.map((m) => (m.id === message.id ? message : m))
-							: [...store.messages, message],
+						messages: [...messages].sort(
+							(a, b) =>
+								new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime(),
+						),
 					},
 				},
 			};

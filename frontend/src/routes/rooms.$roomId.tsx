@@ -14,7 +14,6 @@ import { OutgoingEventTypes } from "@/types/events";
 export const Route = createFileRoute("/rooms/$roomId")({
 	component: RoomComponent,
 	beforeLoad: ({ context }) => {
-		// Access auth via context, not the store directly
 		if (!context.auth.isAuthenticated) {
 			throw redirect({ to: "/login" });
 		}
@@ -25,12 +24,10 @@ export const Route = createFileRoute("/rooms/$roomId")({
 		const roomStore = useRoomStore.getState();
 		const messageStore = useMessagesStore.getState();
 
-		// Fetch rooms list once
 		if (roomStore.roomsList.length === 0 && roomStore.hasMore) {
 			await roomStore.getRooms();
 		}
 
-		// Fetch initial messages for this room
 		const roomMessages = messageStore.getMessage(roomId);
 
 		if (roomMessages.messages.length === 0 && roomMessages.hasMore) {
@@ -65,7 +62,6 @@ function RoomComponent() {
 	const isLeaving = useRoomStore((s) => s.isLeaving);
 	const showToast = useToastStore((s) => s.show);
 
-	// Update user map when room members are available
 	useEffect(() => {
 		const currentRoom = roomsList.find((r) => r.id === Number(roomId));
 		if (

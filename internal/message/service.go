@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ayushgpt01/chatRoomGo/internal/logger"
 	"github.com/ayushgpt01/chatRoomGo/internal/models"
 	"github.com/ayushgpt01/chatRoomGo/internal/room"
 )
@@ -72,6 +73,8 @@ func (srv *MessageService) HandleSendMessage(
 		return nil, fmt.Errorf("get response message id=%d: %w", id, err)
 	}
 
+	res.Nonce = payload.Nonce
+
 	srv.hub.Broadcast(payload.RoomId, &models.MessageCreatedEvent{
 		Data: models.MessageCreatedPayload{
 			Message: res,
@@ -85,6 +88,7 @@ func (srv *MessageService) HandleEditMessage(
 	ctx context.Context,
 	payload EditMessagePayload,
 ) (*models.ResponseMessage, error) {
+	logger.GetLogger().Debug("HandleEditMessage called")
 
 	msg, err := srv.messageStore.GetById(ctx, payload.MessageId)
 	if err != nil {
@@ -92,15 +96,27 @@ func (srv *MessageService) HandleEditMessage(
 	}
 
 	if msg.UserId != payload.UserId {
+		logger.GetLogger().Debug("user_not_matching",
+			"message_user", msg.UserId,
+			"payload_user", payload.UserId,
+		)
 		return nil, models.ErrUnauthorized
 	}
 
 	if msg.RoomId != payload.RoomId {
+		logger.GetLogger().Debug("room_not_matching",
+			"message_room", msg.RoomId,
+			"payload_room", payload.RoomId,
+		)
 		return nil, models.ErrNotFound
 	}
 
 	err = srv.messageStore.UpdateContent(ctx, payload.MessageId, payload.Content)
 	if err != nil {
+		logger.GetLogger().Debug("room_not_matching",
+			"message_room", msg.RoomId,
+			"payload_room", payload.RoomId,
+		)
 		return nil, fmt.Errorf("update message id=%d: %w", payload.MessageId, err)
 	}
 

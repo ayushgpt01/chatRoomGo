@@ -34,13 +34,13 @@ func ParseMessageId(id string) (MessageId, error) {
 }
 
 type Message struct {
-	Id        MessageId `db:"id"`
-	Content   string    `db:"content"`
-	UserId    UserId    `db:"user_id"`
-	RoomId    RoomId    `db:"room_id"`
-	CreatedAt time.Time `db:"created_at"`
-	UpdatedAt time.Time `db:"updated_at"`
-	Delivered bool      `db:"delivered"`
+	Id        MessageId  `db:"id"`
+	Content   string     `db:"content"`
+	UserId    UserId     `db:"user_id"`
+	RoomId    RoomId     `db:"room_id"`
+	CreatedAt time.Time  `db:"created_at"`
+	UpdatedAt *time.Time `db:"updated_at"`
+	Delivered bool       `db:"delivered"`
 }
 
 type UserId = int64

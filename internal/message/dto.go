@@ -20,6 +20,7 @@ type SendMessagePayload struct {
 	UserId  models.UserId
 	RoomId  models.RoomId
 	Content string
+	Nonce   *string
 }
 
 type EditMessagePayload struct {

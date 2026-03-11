@@ -44,9 +44,7 @@ export default function useSocketEvents(roomId: number) {
 				const currentStore = useMessagesStore.getState();
 				const existing = currentStore
 					.getMessage(roomId)
-					.messages.some(
-						(m) => m.id === msg.id || (m.nonce && m.nonce === msg.nonce),
-					);
+					.messages.some((m) => m.id === msg.id);
 
 				if (existing) return;
 

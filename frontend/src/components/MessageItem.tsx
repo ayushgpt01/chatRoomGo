@@ -6,6 +6,8 @@ import type { User } from "@/types/auth";
 import type { Message } from "@/types/message";
 import { formatChatTime } from "@/utils/dateUtils";
 
+const MAX_TIME = 5 * 60 * 1000;
+
 export default function MessageItem({
 	message,
 	prevMessage,
@@ -36,25 +38,23 @@ export default function MessageItem({
 		prevMessage.senderId === message.senderId &&
 		new Date(message.sentAt).getTime() -
 			new Date(prevMessage.sentAt).getTime() <
-			300000; // 5 minutes
+			MAX_TIME;
 
 	// Calculate read status
 	const getReadStatus = () => {
 		if (isSending) return "sending";
 		if (!message.delivered) return "sent";
 
-		// Get room members excluding sender
 		const otherMembers = roomMembers.filter((m) => m.id !== message.senderId);
-		if (otherMembers.length === 0) return "delivered"; // No one else to read
+		if (otherMembers.length === 0) return "delivered";
 
-		// Check if all other members have read it
 		const readCount =
 			message.readBy?.filter((id) => otherMembers.some((m) => m.id === id))
 				.length || 0;
 
 		if (readCount === otherMembers.length) return "read";
-		if (readCount > 0) return "delivered"; // Some but not all have read
-		return "delivered"; // No one has read yet
+		if (readCount > 0) return "delivered";
+		return "delivered";
 	};
 
 	const readStatus = getReadStatus();
@@ -88,7 +88,6 @@ export default function MessageItem({
 				</div>
 			)}
 
-			{/* Header */}
 			{!isConsecutive && !isMine && (
 				<div className="chat-header pb-1 text-sm opacity-80">
 					{message.senderName}
@@ -98,7 +97,6 @@ export default function MessageItem({
 				</div>
 			)}
 
-			{/* Bubble */}
 			<div
 				className={`chat-bubble relative transition-all duration-200 group-hover:shadow-lg ${
 					isMine ? "chat-bubble-primary" : "chat-bubble-secondary"
@@ -155,7 +153,6 @@ export default function MessageItem({
 							)}
 						</div>
 
-						{/* Dropdown Menu */}
 						{isMine && !isSending && (
 							<div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
 								<button
@@ -211,7 +208,7 @@ export default function MessageItem({
 					</div>
 				)}
 			</div>
-			{/* Footer with read receipts */}
+
 			{isMine && (
 				<div className="chat-footer opacity-60 text-xs flex items-center gap-1 justify-end mt-1">
 					{isSending ? (

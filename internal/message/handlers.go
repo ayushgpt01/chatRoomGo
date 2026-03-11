@@ -64,7 +64,8 @@ func HandleGetMessages(srv *MessageService) http.Handler {
 }
 
 type request struct {
-	Content string `json:"content"`
+	Content string  `json:"content"`
+	Nonce   *string `json:"nonce,omitempty"`
 }
 
 func (s request) Valid(ctx context.Context) map[string]string {
@@ -79,9 +80,6 @@ func (s request) Valid(ctx context.Context) map[string]string {
 }
 
 func HandleSendMessage(srv *MessageService) http.Handler {
-	type S struct {
-		Content string `json:"content"`
-	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		roomId, err := models.ParseRoomId(r.PathValue("roomId"))
@@ -105,6 +103,7 @@ func HandleSendMessage(srv *MessageService) http.Handler {
 			UserId:  currentUserId,
 			RoomId:  roomId,
 			Content: body.Content,
+			Nonce:   body.Nonce,
 		})
 
 		if err != nil {

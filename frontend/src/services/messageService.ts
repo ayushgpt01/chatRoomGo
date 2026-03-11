@@ -15,6 +15,7 @@ interface GetMessagesResponse {
 const SendMessageSchema = z.object({
 	roomId: z.coerce.number(),
 	content: z.string().min(1),
+	nonce: z.string(),
 });
 
 const EditMessageSchema = z.object({
@@ -45,12 +46,13 @@ const messageService = {
 	},
 
 	sendMessage: async (payload: z.infer<typeof SendMessageSchema>) => {
-		const { roomId, content } = SendMessageSchema.parse(payload);
+		const { roomId, content, nonce } = SendMessageSchema.parse(payload);
 
 		const response = await axiosClient.post<Message>(
 			`/room/${roomId}/messages`,
 			{
 				content,
+				nonce,
 			},
 		);
 

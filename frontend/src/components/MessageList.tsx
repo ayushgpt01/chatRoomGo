@@ -9,18 +9,13 @@ import MessageItem from "./MessageItem";
 
 interface Props {
 	roomId: number;
-	showUnreadIndicator?: boolean;
 }
 
-export default function MessageList({
-	roomId,
-	showUnreadIndicator = false,
-}: Props) {
+export default function MessageList({ roomId }: Props) {
 	const { messages, hasMore } = useMessagesStore((s) => s.getMessage(roomId));
 	const fetchMessages = useMessagesStore((s) => s.fetchMessages);
 	const { roomsList } = useRoomStore((s) => s);
 	const virtuosoRef = useRef<VirtuosoHandle>(null);
-	const [isAtBottom, setIsAtBottom] = useState(true);
 	const typingUsers = useTypingUsers(roomId);
 	const [readReceiptsModal, setReadReceiptsModal] = useState<{
 		isOpen: boolean;
@@ -47,16 +42,6 @@ export default function MessageList({
 			isOpen: false,
 			message: null,
 		});
-	};
-
-	const handleScroll = (isScrolling: boolean) => {
-		if (!isScrolling) {
-			setIsAtBottom(true);
-		}
-	};
-
-	const handleScrollToBottomChange = (atBottom: boolean) => {
-		setIsAtBottom(atBottom);
 	};
 
 	// Group messages and add date separators
@@ -120,8 +105,6 @@ export default function MessageList({
 				style={{ height: "100%" }}
 				data={processedData}
 				followOutput="smooth"
-				atBottomStateChange={handleScrollToBottomChange}
-				isScrolling={handleScroll}
 				startReached={() => {
 					if (hasMore) fetchMessages(roomId);
 				}}
@@ -168,10 +151,6 @@ export default function MessageList({
 					);
 				}}
 			/>
-
-			{showUnreadIndicator && !isAtBottom && (
-				<div className="absolute top-0 left-0 right-0 bg-linear-to-b from-primary/20 to-transparent h-8 pointer-events-none" />
-			)}
 
 			{/* Typing Indicator */}
 			{typingUsers.length > 0 && (

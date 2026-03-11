@@ -29,8 +29,8 @@ func handleAPIRoutes(mux *http.ServeMux, authService *auth.AuthService, roomServ
 	protectedMux.Handle("POST /room/create", room.HandleCreateRoom(roomService))
 	protectedMux.Handle("GET /room/{roomId}/messages", message.HandleGetMessages(messageService))
 	protectedMux.Handle("POST /room/{roomId}/messages", message.HandleSendMessage(messageService))
-	protectedMux.Handle("PATCH /room/{roomId}/messages", message.HandleEditMessage(messageService))
-	protectedMux.Handle("DELETE /room/{roomId}/messages", message.HandleDeleteMessage(messageService))
+	protectedMux.Handle("PATCH /room/{roomId}/messages/{messageId}", message.HandleEditMessage(messageService))
+	protectedMux.Handle("DELETE /room/{roomId}/messages/{messageId}", message.HandleDeleteMessage(messageService))
 
 	apiMux.Handle("/", authService.Middleware(protectedMux))
 

@@ -77,12 +77,25 @@ func (s *SQLiteMessageRepo) init(ctx context.Context) error {
 
 func (s *SQLiteMessageRepo) GetById(ctx context.Context, id models.MessageId) (*models.Message, error) {
 	var message models.Message
+	var updatedAt sql.NullTime
 
 	row := s.db.QueryRowContext(ctx, `SELECT id, content, user_id, room_id, created_at, updated_at, delivered
 	FROM messages
 	WHERE id = ?`, id)
 
-	err := row.Scan(&message.Id, &message.Content, &message.UserId, &message.RoomId, &message.CreatedAt, &message.UpdatedAt, &message.Delivered)
+	err := row.Scan(
+		&message.Id,
+		&message.Content,
+		&message.UserId,
+		&message.RoomId,
+		&message.CreatedAt,
+		&updatedAt,
+		&message.Delivered,
+	)
+
+	if updatedAt.Valid {
+		message.UpdatedAt = &updatedAt.Time
+	}
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -173,6 +186,7 @@ func (s *SQLiteMessageRepo) GetMessageReaders(ctx context.Context, messageId mod
 
 func (s *SQLiteMessageRepo) GetResponseById(ctx context.Context, id models.MessageId) (*models.ResponseMessage, error) {
 	var message models.ResponseMessage
+	var updatedAt sql.NullTime
 
 	row := s.db.QueryRowContext(ctx, `SELECT m.id, m.content, m.updated_at, u.id, u.name, m.created_at, m.room_id, m.delivered
 	FROM messages m
@@ -182,13 +196,17 @@ func (s *SQLiteMessageRepo) GetResponseById(ctx context.Context, id models.Messa
 	err := row.Scan(
 		&message.Id,
 		&message.Content,
-		&message.EditedAt,
+		&updatedAt,
 		&message.SenderId,
 		&message.SenderName,
 		&message.SentAt,
 		&message.RoomId,
 		&message.Delivered,
 	)
+
+	if updatedAt.Valid {
+		message.EditedAt = &updatedAt.Time
+	}
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -235,16 +253,22 @@ func (s *SQLiteMessageRepo) GetMessagesById(ctx context.Context, roomId models.R
 	messages := []models.ResponseMessage{}
 	for rows.Next() {
 		var msg models.ResponseMessage
+		var updatedAt sql.NullTime
+
 		err := rows.Scan(
 			&msg.Id,
 			&msg.Content,
-			&msg.EditedAt,
+			&updatedAt,
 			&msg.SenderId,
 			&msg.SenderName,
 			&msg.SentAt,
 			&msg.RoomId,
 			&msg.Delivered,
 		)
+
+		if updatedAt.Valid {
+			msg.EditedAt = &updatedAt.Time
+		}
 
 		if err != nil {
 			return nil, fmt.Errorf("scanning messages for room %d: %w", roomId, err)
