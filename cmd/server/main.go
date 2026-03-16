@@ -11,15 +11,21 @@ import (
 	"time"
 
 	"github.com/ayushgpt01/chatRoomGo/internal/logger"
+	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/joho/godotenv"
 )
 
-const HOST = "localhost"
-const PORT = "8080"
-
 func main() {
-	// Initialize structured logging first
 	logger.Init()
-	logger.Info("Starting ChatRoom server", "host", HOST, "port", PORT)
+
+	if err := godotenv.Load(); err != nil {
+		logger.Info("No .env file found, relying on OS environment variables")
+	}
+
+	host := os.Getenv("HOST")
+	port := os.Getenv("PORT")
+
+	logger.Info("Starting ChatRoom server", "host", host, "port", port)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
@@ -29,7 +35,7 @@ func main() {
 		logger.Info("Shutting down server...")
 	}()
 
-	db, err := sql.Open("sqlite", "my_app_database.db?_fk=1")
+	db, err := sql.Open("pgx", os.Getenv("DATABASE_URL"))
 	if err != nil {
 		logger.Error("Failed to open database connection", "error", err)
 		os.Exit(1)
@@ -38,7 +44,7 @@ func main() {
 	handler := handlerInit(ctx, db)
 
 	httpServer := &http.Server{
-		Addr:    net.JoinHostPort(HOST, PORT),
+		Addr:    net.JoinHostPort(host, port),
 		Handler: handler,
 	}
 

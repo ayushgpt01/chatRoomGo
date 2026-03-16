@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/ayushgpt01/chatRoomGo/internal/auth"
@@ -19,41 +18,11 @@ import (
 )
 
 func handlerInit(ctx context.Context, db *sql.DB) http.Handler {
-	userStore, err := user.NewSqliteUserRepo(ctx, db)
-	if err != nil {
-		logger.Error("Failed to initialize user repo", "error", err)
-		os.Exit(1)
-	}
-
-	logger.Info("Initialized User Repo")
-
-	roomStore, err := room.NewSQLiteRoomRepo(ctx, db)
-	if err != nil {
-		logger.Error("Failed to initialize room repo", "error", err)
-		os.Exit(1)
-	}
-	logger.Info("Initialized Room Repo")
-
-	messageStore, err := message.NewSQLiteMessageRepo(ctx, db)
-	if err != nil {
-		logger.Error("Failed to initialize message repo", "error", err)
-		os.Exit(1)
-	}
-	logger.Info("Initialized Message Repo")
-
-	roomMemberStore, err := room.NewSQLiteRoomMemberRepo(ctx, db)
-	if err != nil {
-		logger.Error("Failed to initialize room member repo", "error", err)
-		os.Exit(1)
-	}
-	logger.Info("Initialized Room member Repo")
-
-	authStore, err := auth.NewSQLiteAuthRepo(ctx, db)
-	if err != nil {
-		logger.Error("Failed to initialize auth repo", "error", err)
-		os.Exit(1)
-	}
-	logger.Info("Initialized Auth Repo")
+	userStore := user.NewPostgresUserRepo(ctx, db)
+	roomStore := room.NewPostgresRoomRepo(ctx, db)
+	messageStore := message.NewPostgresMessageRepo(ctx, db)
+	roomMemberStore := room.NewPostgresRoomMemberRepo(ctx, db)
+	authStore := auth.NewPostgresAuthRepo(ctx, db)
 
 	if err := seed.SeedChatData(context.Background(), db); err != nil {
 		logger.Error("Failed to seed chat data", "error", err)
@@ -71,8 +40,17 @@ func handlerInit(ctx context.Context, db *sql.DB) http.Handler {
 	// Cleanup expired tokens every 1 hour
 	go func() {
 		ticker := time.NewTicker(1 * time.Hour)
-		for range ticker.C {
-			authService.HandleCleanup(context.Background())
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				cleanupCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+				authService.HandleCleanup(cleanupCtx)
+				cancel()
+			}
 		}
 	}()
 

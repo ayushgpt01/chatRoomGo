@@ -7,57 +7,31 @@ import (
 	"fmt"
 
 	"github.com/ayushgpt01/chatRoomGo/internal/models"
-	_ "modernc.org/sqlite"
 )
 
-type SQLiteRoomMemberRepo struct {
+type PostgresRoomMemberRepo struct {
 	db *sql.DB
 }
 
-func NewSQLiteRoomMemberRepo(ctx context.Context, db *sql.DB) (*SQLiteRoomMemberRepo, error) {
-	store := SQLiteRoomMemberRepo{db}
-
-	if err := store.init(ctx); err != nil {
-		return nil, fmt.Errorf("init room_member repo: %w", err)
-	}
-
-	return &store, nil
+func NewPostgresRoomMemberRepo(ctx context.Context, db *sql.DB) *PostgresRoomMemberRepo {
+	return &PostgresRoomMemberRepo{db}
 }
 
-func (s *SQLiteRoomMemberRepo) init(ctx context.Context) error {
-	createTableSQL := `CREATE TABLE IF NOT EXISTS room_members(
-		room_id INTEGER NOT NULL,
-		user_id INTEGER NOT NULL,
-		joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-		last_message_read_id INTEGER DEFAULT 0,
-		FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE,
-		FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-		PRIMARY KEY (room_id, user_id)
-	)`
+func (s *PostgresRoomMemberRepo) JoinRoom(ctx context.Context, roomId models.RoomId, userId models.UserId) error {
+	query := "INSERT INTO room_members(room_id, user_id) VALUES($1, $2) ON CONFLICT DO NOTHING"
 
-	createUserIdIndexSQL := `CREATE INDEX IF NOT EXISTS idx_room_members_users_id ON room_members(user_id)`
-
-	if _, err := s.db.ExecContext(ctx, createTableSQL); err != nil {
-		return fmt.Errorf("create room_members table: %w", err)
-	}
-
-	if _, err := s.db.ExecContext(ctx, createUserIdIndexSQL); err != nil {
-		return fmt.Errorf("create room_members user_id index: %w", err)
-	}
-
-	return nil
-}
-
-func (s *SQLiteRoomMemberRepo) JoinRoom(ctx context.Context, roomId models.RoomId, userId models.UserId) error {
-	_, err := s.db.ExecContext(ctx, "INSERT OR IGNORE INTO room_members(room_id, user_id) VALUES(?, ?)", roomId, userId)
+	_, err := s.db.ExecContext(ctx, query, roomId, userId)
 	if err != nil {
 		return fmt.Errorf("join room room_id=%d user_id=%d: %w", roomId, userId, err)
 	}
+
 	return nil
 }
 
-func (s *SQLiteRoomMemberRepo) LeaveRoom(ctx context.Context, roomId models.RoomId, userId models.UserId) error {
-	res, err := s.db.ExecContext(ctx, "DELETE FROM room_members WHERE room_id = ? AND user_id = ?", roomId, userId)
+func (s *PostgresRoomMemberRepo) LeaveRoom(ctx context.Context, roomId models.RoomId, userId models.UserId) error {
+	query := "DELETE FROM room_members WHERE room_id = $1 AND user_id = $2"
+
+	res, err := s.db.ExecContext(ctx, query, roomId, userId)
 	if err != nil {
 		return fmt.Errorf("leave room room_id=%d user_id=%d: %w", roomId, userId, err)
 	}
@@ -74,8 +48,8 @@ func (s *SQLiteRoomMemberRepo) LeaveRoom(ctx context.Context, roomId models.Room
 	return nil
 }
 
-func (s *SQLiteRoomMemberRepo) Exists(ctx context.Context, roomId models.RoomId, userId models.UserId) (bool, error) {
-	query := "SELECT EXISTS(SELECT 1 FROM room_members WHERE room_id = ? AND user_id = ?)"
+func (s *PostgresRoomMemberRepo) Exists(ctx context.Context, roomId models.RoomId, userId models.UserId) (bool, error) {
+	query := "SELECT EXISTS(SELECT 1 FROM room_members WHERE room_id = $1 AND user_id = $2)"
 
 	var exists bool
 
@@ -90,8 +64,8 @@ func (s *SQLiteRoomMemberRepo) Exists(ctx context.Context, roomId models.RoomId,
 	return exists, nil
 }
 
-func (s *SQLiteRoomMemberRepo) CountByRoomId(ctx context.Context, roomId models.RoomId) (int, error) {
-	query := "SELECT COUNT(user_id) FROM room_members WHERE room_id = ?"
+func (s *PostgresRoomMemberRepo) CountByRoomId(ctx context.Context, roomId models.RoomId) (int, error) {
+	query := "SELECT COUNT(user_id) FROM room_members WHERE room_id = $1"
 	var count int
 
 	err := s.db.QueryRowContext(ctx, query, roomId).Scan(&count)
@@ -105,8 +79,8 @@ func (s *SQLiteRoomMemberRepo) CountByRoomId(ctx context.Context, roomId models.
 	return count, nil
 }
 
-func (s *SQLiteRoomMemberRepo) GetByRoomId(ctx context.Context, roomId models.RoomId) ([]models.UserId, error) {
-	query := "SELECT user_id FROM room_members WHERE room_id = ?"
+func (s *PostgresRoomMemberRepo) GetByRoomId(ctx context.Context, roomId models.RoomId) ([]models.UserId, error) {
+	query := "SELECT user_id FROM room_members WHERE room_id = $1"
 
 	rows, err := s.db.QueryContext(ctx, query, roomId)
 	if err != nil {
@@ -130,20 +104,23 @@ func (s *SQLiteRoomMemberRepo) GetByRoomId(ctx context.Context, roomId models.Ro
 	return ids, nil
 }
 
-func (s *SQLiteRoomMemberRepo) GetRoomsByUserId(ctx context.Context, userId models.UserId, limit int, cursor *string) ([]*models.Room, *string, error) {
+func (s *PostgresRoomMemberRepo) GetRoomsByUserId(ctx context.Context, userId models.UserId, limit int, cursor *string) ([]*models.Room, *string, error) {
 	query := `SELECT r.id, r.name, r.created_at, r.updated_at
 	FROM rooms r
 	JOIN room_members rm ON r.id = rm.room_id
-	WHERE rm.user_id = ?`
+	WHERE rm.user_id = $1`
 
 	args := []any{userId}
+	placeholderCount := 1
 
 	if cursor != nil && *cursor != "" {
-		query += " AND r.id < ? "
+		placeholderCount++
+		query += fmt.Sprintf(" AND r.id < $%d ", placeholderCount)
 		args = append(args, *cursor)
 	}
 
-	query += " ORDER BY r.id ASC LIMIT ?"
+	placeholderCount++
+	query += fmt.Sprintf(" ORDER BY r.id DESC LIMIT $%d", placeholderCount)
 	args = append(args, limit+1)
 
 	rows, err := s.db.QueryContext(ctx, query, args...)
@@ -177,9 +154,9 @@ func (s *SQLiteRoomMemberRepo) GetRoomsByUserId(ctx context.Context, userId mode
 	return rooms, nextCursor, nil
 }
 
-func (s *SQLiteRoomMemberRepo) UpdateLastMessageRead(ctx context.Context, roomId models.RoomId, userId models.UserId, messageId models.MessageId) error {
+func (s *PostgresRoomMemberRepo) UpdateLastMessageRead(ctx context.Context, roomId models.RoomId, userId models.UserId, messageId models.MessageId) error {
 	res, err := s.db.ExecContext(ctx,
-		"UPDATE room_members SET last_message_read_id = ? WHERE room_id = ? AND user_id = ?",
+		"UPDATE room_members SET last_message_read_id = $1 WHERE room_id = $2 AND user_id = $3",
 		messageId, roomId, userId)
 	if err != nil {
 		return fmt.Errorf("update last message read room_id=%d user_id=%d: %w", roomId, userId, err)
@@ -197,8 +174,8 @@ func (s *SQLiteRoomMemberRepo) UpdateLastMessageRead(ctx context.Context, roomId
 	return nil
 }
 
-func (s *SQLiteRoomMemberRepo) GetLastMessageRead(ctx context.Context, roomId models.RoomId, userId models.UserId) (models.MessageId, error) {
-	query := "SELECT last_message_read_id FROM room_members WHERE room_id = ? AND user_id = ?"
+func (s *PostgresRoomMemberRepo) GetLastMessageRead(ctx context.Context, roomId models.RoomId, userId models.UserId) (models.MessageId, error) {
+	query := "SELECT last_message_read_id FROM room_members WHERE room_id = $1 AND user_id = $2"
 	var lastReadId models.MessageId
 
 	err := s.db.QueryRowContext(ctx, query, roomId, userId).Scan(&lastReadId)
@@ -212,11 +189,11 @@ func (s *SQLiteRoomMemberRepo) GetLastMessageRead(ctx context.Context, roomId mo
 	return lastReadId, nil
 }
 
-func (s *SQLiteRoomMemberRepo) GetRoomMembers(ctx context.Context, roomId models.RoomId) ([]*models.User, error) {
+func (s *PostgresRoomMemberRepo) GetRoomMembers(ctx context.Context, roomId models.RoomId) ([]*models.User, error) {
 	query := `SELECT u.id, u.name, u.user_name, u.account_role, u.created_at, u.updated_at
 	FROM users u
 	JOIN room_members rm ON u.id = rm.user_id
-	WHERE rm.room_id = ?
+	WHERE rm.room_id = $1
 	ORDER BY u.created_at ASC
 	LIMIT 50`
 

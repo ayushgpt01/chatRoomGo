@@ -3,6 +3,7 @@ package seed
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	"github.com/ayushgpt01/chatRoomGo/internal/logger"
 	"github.com/ayushgpt01/chatRoomGo/utils"
@@ -29,59 +30,60 @@ func SeedChatData(ctx context.Context, db *sql.DB) error {
 	passwordHash, _ := utils.HashPassword("password")
 
 	// ---- Insert Users ----
-	res, err := tx.ExecContext(ctx, `
-		INSERT INTO users (name, user_name, password_hash, account_role)
-		VALUES (?, ?, ?, ?)
-	`, "Alice", "alice", passwordHash, "user")
-	if err != nil {
-		return err
-	}
-	aliceID, _ := res.LastInsertId()
+	// Use RETURNING id and Scan for Postgres
+	var aliceID, bobID int64
 
-	res, err = tx.ExecContext(ctx, `
-		INSERT INTO users (name, user_name, password_hash, account_role)
-		VALUES (?, ?, ?, ?)
-	`, "Bob", "bob", passwordHash, "user")
+	err = tx.QueryRowContext(ctx, `
+        INSERT INTO users (name, user_name, password_hash, account_role)
+        VALUES ($1, $2, $3, $4) RETURNING id
+    `, "Alice", "alice", passwordHash, "user").Scan(&aliceID)
 	if err != nil {
-		return err
+		return fmt.Errorf("seeding Alice: %w", err)
 	}
-	bobID, _ := res.LastInsertId()
+
+	err = tx.QueryRowContext(ctx, `
+        INSERT INTO users (name, user_name, password_hash, account_role)
+        VALUES ($1, $2, $3, $4) RETURNING id
+    `, "Bob", "bob", passwordHash, "user").Scan(&bobID)
+	if err != nil {
+		return fmt.Errorf("seeding Bob: %w", err)
+	}
 
 	// ---- Insert Room ----
-	res, err = tx.ExecContext(ctx, `
-		INSERT INTO rooms (name)
-		VALUES (?)
-	`, "General")
+	var roomID int64
+	err = tx.QueryRowContext(ctx, `
+        INSERT INTO rooms (name)
+        VALUES ($1) RETURNING id
+    `, "General").Scan(&roomID)
 	if err != nil {
-		return err
+		return fmt.Errorf("seeding room: %w", err)
 	}
-	roomID, _ := res.LastInsertId()
 
 	// ---- Join Users to Room ----
 	_, err = tx.ExecContext(ctx, `
-		INSERT INTO room_members (room_id, user_id)
-		VALUES (?, ?), (?, ?)
-	`, roomID, aliceID, roomID, bobID)
+        INSERT INTO room_members (room_id, user_id)
+        VALUES ($1, $2), ($1, $3)
+    `, roomID, aliceID, bobID)
 	if err != nil {
-		return err
+		return fmt.Errorf("seeding members: %w", err)
 	}
 
 	// ---- Insert Messages ----
 	_, err = tx.ExecContext(ctx, `
-		INSERT INTO messages (content, user_id, room_id)
-		VALUES 
-			(?, ?, ?),
-			(?, ?, ?),
-			(?, ?, ?),
-			(?, ?, ?)
-	`,
+        INSERT INTO messages (content, user_id, room_id)
+        VALUES 
+            ($1, $2, $3),
+            ($4, $5, $6),
+            ($7, $8, $9),
+            ($10, $11, $12)
+    `,
 		"Hey Bob 👋", aliceID, roomID,
 		"Hey Alice! What's up?", bobID, roomID,
 		"Just testing the seeded chat.", aliceID, roomID,
 		"Looks good to me 👍", bobID, roomID,
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("seeding messages: %w", err)
 	}
 
 	logger.Info("Database seeded successfully",

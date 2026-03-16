@@ -42,7 +42,7 @@ func HandleRoutes(wsHandler *ws.Wshandler, authService *auth.AuthService, roomSe
 	handler = middleware.LoggingMiddleware(handler)
 
 	c := cors.New(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:3000"},
+		AllowedOrigins:   []string{"http://localhost:3000", "https://ayushgpt01.com", "https://chat.ayushgpt01.com"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
 		AllowedHeaders:   []string{"Authorization", "Content-Type"},
 		AllowCredentials: true,

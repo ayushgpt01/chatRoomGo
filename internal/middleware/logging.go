@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net"
@@ -57,11 +58,14 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 		if r.Body != nil && r.ContentLength > 0 && logger.ShouldLogPayload() {
 			body, err := readRequestBody(r)
 			if err == nil && len(body) > 0 {
-				log.Debug("request_payload",
-					"content_type", r.Header.Get("Content-Type"),
-					"payload_size", len(body),
-					"payload", string(body),
-				)
+				var jsonBody any
+
+				if json.Unmarshal(body, &jsonBody) == nil {
+					log.Debug("request_payload", "payload", jsonBody)
+				} else {
+					log.Debug("request_payload", "payload", string(body))
+				}
+
 			}
 		}
 
@@ -88,11 +92,13 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 		// Log response body if it's small enough and logging is enabled
 		if wrapped.size > 0 && wrapped.size < 1024 && logger.ShouldLogPayload() {
 			if len(wrapped.body) > 0 {
-				log.Debug("response_payload",
-					"content_type", wrapped.Header().Get("Content-Type"),
-					"payload_size", len(wrapped.body),
-					"payload", string(wrapped.body),
-				)
+				var jsonBody any
+
+				if json.Unmarshal(wrapped.body, &jsonBody) == nil {
+					log.Debug("response_payload", "payload", jsonBody)
+				} else {
+					log.Debug("response_payload", "payload", string(wrapped.body))
+				}
 			}
 		}
 

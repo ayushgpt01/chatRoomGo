@@ -56,11 +56,11 @@ function RoomComponent() {
 
 	useSocketEvents(Number(roomId));
 
-	const room = useRoomStore((s) => s.room);
 	const roomsList = useRoomStore((s) => s.roomsList);
 	const leave = useRoomStore((s) => s.leave);
 	const isLeaving = useRoomStore((s) => s.isLeaving);
 	const showToast = useToastStore((s) => s.show);
+	const room = roomsList.find((r) => r.id === Number(roomId));
 
 	useEffect(() => {
 		const currentRoom = roomsList.find((r) => r.id === Number(roomId));

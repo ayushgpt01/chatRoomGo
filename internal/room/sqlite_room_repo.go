@@ -10,13 +10,6 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-type RoomStore interface {
-	Create(ctx context.Context, name string) (*models.Room, error)
-	GetById(ctx context.Context, roomId models.RoomId) (*models.Room, error)
-	UpdateName(ctx context.Context, roomId models.RoomId, name string) error
-	Delete(ctx context.Context, roomId models.RoomId) error
-}
-
 type SQLiteRoomRepo struct {
 	db *sql.DB
 }
