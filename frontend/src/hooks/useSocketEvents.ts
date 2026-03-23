@@ -27,7 +27,7 @@ export default function useSocketEvents(roomId: number) {
 		const wsUrl = `${protocol}//${
 			import.meta.env.VITE_ENV === "development"
 				? import.meta.env.VITE_WS_URL
-				: window.location.host
+				: import.meta.env.VITE_API_ROUTE || window.location.host
 		}/ws?room=${roomId}&user=${userId}`;
 
 		connect(wsUrl);
